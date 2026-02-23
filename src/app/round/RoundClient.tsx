@@ -6,6 +6,28 @@ import { isAcceptable } from "@/lib/normalizeAnswer";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
+type BadgeTier = "bronze" | "silver" | "gold" | "perfect";
+
+function tiersEarned(score: number, total: number): BadgeTier[] {
+  // assuming total is 20, but works generally
+  
+
+  // Use raw score thresholds since your rounds are out of 20
+  const earned: BadgeTier[] = [];
+  if (score >= 10) earned.push("bronze");
+  if (score >= 15) earned.push("silver");
+  if (score >= 18) earned.push("gold");
+  if (score >= 20) earned.push("perfect");
+  return earned;
+}
+
+function tierLabel(t: BadgeTier) {
+  if (t === "bronze") return "Bronze";
+  if (t === "silver") return "Silver";
+  if (t === "gold") return "Gold";
+  return "Perfect";
+}
+
 type Tossup = {
   id: string;
   set_id: string;
@@ -83,6 +105,7 @@ const searchParams = useSearchParams();
   const [correctCount, setCorrectCount] = useState(0);
   const [powerCount, setPowerCount] = useState(0);
   const [negCount, setNegCount] = useState(0);
+  const [badgeMessage, setBadgeMessage] = useState<string | null>(null);
 
   // Round queue (IDs shuffled once per round; no repeats)
   const roundQueueRef = useRef<string[]>([]);
@@ -418,7 +441,19 @@ useEffect(() => {
       correct: correctCount,
       total: roundTotal,
     });
+    // ---- Badge unlocks (single-category rounds only) ----
+try {
+  const total = roundTotal || 20;
 
+  const earned = tiersEarned(correctCount, total);
+
+  if (earned.length > 0) {
+    const bestTier = earned[earned.length - 1];
+    setBadgeMessage(`Badge earned: ${tierLabel(bestTier)} (${correctCount}/${total})`);
+  }
+} catch (e) {
+  console.error("Badge error", e);
+}
     if (error) console.error("Error saving round:", error.message);
   }, [userId, useWeakestMode, categoryFilter, correctCount, roundTotal]);
 
