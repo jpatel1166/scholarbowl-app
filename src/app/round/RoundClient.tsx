@@ -743,6 +743,18 @@ try {
           <p style={{ margin: "8px 0" }}>
             <b>Negs:</b> {negCount}
           </p>
+          {badgeMessage && (
+  <div style={{
+    marginTop: 10,
+    padding: "10px 14px",
+    background: "#111",
+    color: "white",
+    borderRadius: 8,
+    fontWeight: 600
+  }}>
+    🏅 {badgeMessage}
+  </div>
+)}
 
           <button
             onClick={() => {
