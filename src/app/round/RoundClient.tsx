@@ -9,7 +9,10 @@ import Link from "next/link";
 type BadgeTier = "bronze" | "silver" | "gold" | "perfect";
 
 function tiersEarned(score: number, total: number): BadgeTier[] {
-  // Using raw thresholds for rounds out of 20 (still works if total differs)
+  // assuming total is 20, but works generally
+  
+
+  // Use raw score thresholds since your rounds are out of 20
   const earned: BadgeTier[] = [];
   if (score >= 10) earned.push("bronze");
   if (score >= 15) earned.push("silver");
@@ -52,8 +55,7 @@ function shuffleInPlace<T>(arr: T[]) {
 
 export default function RoundPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
+const searchParams = useSearchParams();
   // Auth
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -103,8 +105,6 @@ export default function RoundPage() {
   const [correctCount, setCorrectCount] = useState(0);
   const [powerCount, setPowerCount] = useState(0);
   const [negCount, setNegCount] = useState(0);
-
-  // Badge message shown in summary
   const [badgeMessage, setBadgeMessage] = useState<string | null>(null);
 
   // Round queue (IDs shuffled once per round; no repeats)
@@ -117,24 +117,24 @@ export default function RoundPage() {
       else setUserId(data.user.id);
     });
   }, [router]);
+useEffect(() => {
+  // Don’t change settings mid-round
+  if (roundActive) return;
 
-  // Preselect category from dashboard link: /round?category_id=...&n=20
-  useEffect(() => {
-    if (roundActive) return;
+  const cid = searchParams.get("category_id");
+  if (cid) {
+    setUseWeakestMode(false);
+    setCategoryFilter(cid);
+  }
 
-    const cid = searchParams.get("category_id");
-    if (cid) {
-      setUseWeakestMode(false);
-      setCategoryFilter(cid);
+  const n = searchParams.get("n");
+  if (n) {
+    const parsed = Number(n);
+    if (parsed === 10 || parsed === 15 || parsed === 20) {
+      setRoundLen(parsed);
     }
-
-    const n = searchParams.get("n");
-    if (n) {
-      const parsed = Number(n);
-      if (parsed === 10 || parsed === 15 || parsed === 20) setRoundLen(parsed);
-    }
-  }, [searchParams, roundActive]);
-
+  }
+}, [searchParams, roundActive]);
   // ---------- Load sets ----------
   useEffect(() => {
     supabase
@@ -228,7 +228,12 @@ export default function RoundPage() {
     let all: { id: string }[] = [];
 
     while (true) {
-      let q = supabase.from("tossups").select("id").eq("set_id", setId).range(from, from + pageSize - 1);
+      let q = supabase
+        .from("tossups")
+        .select("id")
+        .eq("set_id", setId)
+        .range(from, from + pageSize - 1);
+
       if (catIds) q = q.in("category_id", catIds);
 
       const { data, error } = await q;
@@ -253,11 +258,13 @@ export default function RoundPage() {
     const nextId = roundQueueRef.current.shift();
 
     if (!nextId) {
+      // No more questions available in this round
       setRoundActive(false);
       setTossup(null);
       return;
     }
 
+    // Reset per-question state
     setResult(null);
     setLastAttemptId(null);
     setAnswer("");
@@ -347,7 +354,10 @@ export default function RoundPage() {
     if (!tossup || result || lockedOut) return;
     setSecondsLeft(null);
     setBuzzed(true);
-    setTimeout(() => answerInputRef.current?.focus(), 0);
+
+    setTimeout(() => {
+      answerInputRef.current?.focus();
+    }, 0);
   }, [tossup, result, lockedOut]);
 
   const revealNextLine = useCallback(() => {
@@ -417,66 +427,34 @@ export default function RoundPage() {
     if (!correct) setNegCount((n2) => n2 + 1);
   }, [tossup, userId, answer, lineIndex, startMs, recomputeWeakest]);
 
-  // ---------- Save round summary + unlock badges ----------
+  // ---------- Save round summary (Phase 1) ----------
   const finalizeRound = useCallback(async () => {
+    // Only save if this was a single-category round.
+    // "All" and "Weakest 2" modes mix categories.
     if (!userId) return;
+    if (useWeakestMode) return;
+    if (categoryFilter === "all") return;
 
-    // Always compute message (so you get feedback even if they played "All" by accident)
-    const total = roundTotal || 20;
-    const earned = tiersEarned(correctCount, total);
-    const bestTier = earned.length ? earned[earned.length - 1] : null;
-
-    const isSingleCategory = !useWeakestMode && categoryFilter !== "all";
-
-    if (!isSingleCategory) {
-      // Helpful message so it doesn't feel "broken"
-      if (bestTier) {
-        setBadgeMessage(
-          `You would have earned ${tierLabel(bestTier)} (${correctCount}/${total}). Badges unlock only in single-category rounds (use Dashboard → Go).`
-        );
-      } else {
-        setBadgeMessage(`Badges unlock only in single-category rounds (use Dashboard → Go).`);
-      }
-      return;
-    }
-
-    // Save round summary (single-category only)
     const { error } = await supabase.from("practice_rounds").insert({
       user_id: userId,
       category_id: categoryFilter,
       correct: correctCount,
       total: roundTotal,
     });
+    // ---- Badge unlocks (single-category rounds only) ----
+try {
+  const total = roundTotal || 20;
 
+  const earned = tiersEarned(correctCount, total);
+
+  if (earned.length > 0) {
+    const bestTier = earned[earned.length - 1];
+    setBadgeMessage(`Badge earned: ${tierLabel(bestTier)} (${correctCount}/${total})`);
+  }
+} catch (e) {
+  console.error("Badge error", e);
+}
     if (error) console.error("Error saving round:", error.message);
-
-    // Save badge unlocks (single-category only)
-    // This assumes you created a table badge_unlocks with a UNIQUE constraint on (user_id, category_id, tier)
-    try {
-      if (earned.length > 0) {
-        const rowsToUpsert = earned.map((tier) => ({
-          user_id: userId,
-          category_id: categoryFilter,
-          tier,
-          score: correctCount,
-          total,
-        }));
-
-        // Upsert with ignoreDuplicates prevents errors if they already earned it before.
-        const { error: badgeErr } = await supabase
-          .from("badge_unlocks")
-          .upsert(rowsToUpsert, { onConflict: "user_id,category_id,tier", ignoreDuplicates: true });
-
-        if (badgeErr) console.log("Badge unlock upsert:", badgeErr.message);
-
-        const top = earned[earned.length - 1];
-        setBadgeMessage(`Badge earned: ${tierLabel(top)} (${correctCount}/${total})`);
-      } else {
-        setBadgeMessage(null);
-      }
-    } catch (e) {
-      console.error("Badge error", e);
-    }
   }, [userId, useWeakestMode, categoryFilter, correctCount, roundTotal]);
 
   // ---------- NEXT IN ROUND (saves when round ends) ----------
@@ -488,6 +466,7 @@ export default function RoundPage() {
     setAnswer("");
     setLineIndex(0);
 
+    // If we're at the end, finish the round
     if (qNum >= roundTotal) {
       void finalizeRound();
       setRoundActive(false);
@@ -495,12 +474,12 @@ export default function RoundPage() {
       return;
     }
 
+    // Advance question number and load exactly one next tossup
     setQNum(qNum + 1);
     loadNextTossup();
   }, [qNum, roundTotal, loadNextTossup, finalizeRound]);
 
   const startRound = useCallback(async () => {
-    setBadgeMessage(null); // clear previous unlock text
     setRoundActive(true);
     setQNum(1);
     setScore(0);
@@ -508,6 +487,7 @@ export default function RoundPage() {
     setPowerCount(0);
     setNegCount(0);
 
+    // Build a truly-random, no-repeat queue for this round
     const ids = await fetchAllEligibleIds();
     if (!ids || ids.length === 0) {
       setRoundActive(false);
@@ -541,7 +521,7 @@ export default function RoundPage() {
     roundQueueRef.current = [];
   }, [finalizeRound]);
 
-  // ---------- Keyboard controls ----------
+  // ---------- Keyboard controls (FIXED) ----------
   useEffect(() => {
     function isTypingInInput() {
       const el = document.activeElement as HTMLElement | null;
@@ -763,23 +743,25 @@ export default function RoundPage() {
           <p style={{ margin: "8px 0" }}>
             <b>Negs:</b> {negCount}
           </p>
-
           {badgeMessage && (
-            <div
-              style={{
-                marginTop: 10,
-                padding: "10px 14px",
-                background: "#111",
-                color: "white",
-                borderRadius: 8,
-                fontWeight: 600,
-              }}
-            >
-              🏅 {badgeMessage}
-            </div>
-          )}
+  <div style={{
+    marginTop: 10,
+    padding: "10px 14px",
+    background: "#111",
+    color: "white",
+    borderRadius: 8,
+    fontWeight: 600
+  }}>
+    🏅 {badgeMessage}
+  </div>
+)}
 
-          <button onClick={startRound} style={{ padding: "10px 14px", marginRight: 10 }}>
+          <button
+            onClick={() => {
+              startRound();
+            }}
+            style={{ padding: "10px 14px", marginRight: 10 }}
+          >
             Start Another Round
           </button>
           <button
@@ -789,7 +771,6 @@ export default function RoundPage() {
               setCorrectCount(0);
               setPowerCount(0);
               setNegCount(0);
-              setBadgeMessage(null);
             }}
             style={{ padding: "10px 14px" }}
           >
