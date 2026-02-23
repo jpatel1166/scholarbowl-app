@@ -151,8 +151,11 @@ const teamByCategory = useMemo(() => {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <h2 style={{ margin: 0 }}>Stats</h2>
         <div style={{ display: "flex", gap: 14 }}>
-          <Link href="/play">Tossups</Link>
+               <Link href="/dashboard">Dashboard</Link>
+          <Link href="/play">Play</Link>
           <Link href="/account">Account</Link>
+          <Link href="/coach">Coach</Link>
+          <Link href="/stats">Stats</Link>
         </div>
       </div>
 

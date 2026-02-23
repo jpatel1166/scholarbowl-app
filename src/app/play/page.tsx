@@ -456,6 +456,7 @@ if (correct) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
         <h2 style={{ margin: 0 }}>Tossup Practice</h2>
         <div style={{ display: "flex", gap: 14 }}>
+          <Link href="/dashboard">Dashboard</Link>
           <Link href="/account">Account</Link>
           <Link href="/round">Round</Link>
           <Link href="/coach">Coach</Link>

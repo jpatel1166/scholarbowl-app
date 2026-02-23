@@ -3,7 +3,7 @@ import { playSound } from "@/lib/sounds";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { isAcceptable } from "@/lib/normalizeAnswer";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type Tossup = {
@@ -33,7 +33,7 @@ function shuffleInPlace<T>(arr: T[]) {
 
 export default function RoundPage() {
   const router = useRouter();
-
+const searchParams = useSearchParams();
   // Auth
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -94,7 +94,24 @@ export default function RoundPage() {
       else setUserId(data.user.id);
     });
   }, [router]);
+useEffect(() => {
+  // Don’t change settings mid-round
+  if (roundActive) return;
 
+  const cid = searchParams.get("category_id");
+  if (cid) {
+    setUseWeakestMode(false);
+    setCategoryFilter(cid);
+  }
+
+  const n = searchParams.get("n");
+  if (n) {
+    const parsed = Number(n);
+    if (parsed === 10 || parsed === 15 || parsed === 20) {
+      setRoundLen(parsed);
+    }
+  }
+}, [searchParams, roundActive]);
   // ---------- Load sets ----------
   useEffect(() => {
     supabase
@@ -387,7 +404,25 @@ export default function RoundPage() {
     if (!correct) setNegCount((n2) => n2 + 1);
   }, [tossup, userId, answer, lineIndex, startMs, recomputeWeakest]);
 
-  // ---------- NEXT IN ROUND (FIXED: no side effects inside setQNum updater) ----------
+  // ---------- Save round summary (Phase 1) ----------
+  const finalizeRound = useCallback(async () => {
+    // Only save if this was a single-category round.
+    // "All" and "Weakest 2" modes mix categories.
+    if (!userId) return;
+    if (useWeakestMode) return;
+    if (categoryFilter === "all") return;
+
+    const { error } = await supabase.from("practice_rounds").insert({
+      user_id: userId,
+      category_id: categoryFilter,
+      correct: correctCount,
+      total: roundTotal,
+    });
+
+    if (error) console.error("Error saving round:", error.message);
+  }, [userId, useWeakestMode, categoryFilter, correctCount, roundTotal]);
+
+  // ---------- NEXT IN ROUND (saves when round ends) ----------
   const nextInRound = useCallback(() => {
     setResult(null);
     setBuzzed(false);
@@ -398,6 +433,7 @@ export default function RoundPage() {
 
     // If we're at the end, finish the round
     if (qNum >= roundTotal) {
+      void finalizeRound();
       setRoundActive(false);
       setTossup(null);
       return;
@@ -406,7 +442,7 @@ export default function RoundPage() {
     // Advance question number and load exactly one next tossup
     setQNum(qNum + 1);
     loadNextTossup();
-  }, [qNum, roundTotal, loadNextTossup]);
+  }, [qNum, roundTotal, loadNextTossup, finalizeRound]);
 
   const startRound = useCallback(async () => {
     setRoundActive(true);
@@ -435,7 +471,10 @@ export default function RoundPage() {
     loadNextTossup();
   }, [fetchAllEligibleIds, roundLen, loadNextTossup]);
 
+  // ---------- End round early (also saves) ----------
   const endRound = useCallback(() => {
+    void finalizeRound();
+
     setRoundActive(false);
     setTossup(null);
     setResult(null);
@@ -445,7 +484,7 @@ export default function RoundPage() {
     setAnswer("");
     setLineIndex(0);
     roundQueueRef.current = [];
-  }, []);
+  }, [finalizeRound]);
 
   // ---------- Keyboard controls (FIXED) ----------
   useEffect(() => {
@@ -542,6 +581,7 @@ export default function RoundPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
         <h2 style={{ margin: 0 }}>Round Mode</h2>
         <div style={{ display: "flex", gap: 14 }}>
+          <Link href="/dashboard">Dashboard</Link>
           <Link href="/play">Play</Link>
           <Link href="/account">Account</Link>
           <Link href="/coach">Coach</Link>
