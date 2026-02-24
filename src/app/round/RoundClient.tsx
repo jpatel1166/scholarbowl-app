@@ -826,7 +826,7 @@ export default function RoundPage() {
               Next line
             </button>
             <button onClick={buzz} disabled={buzzed || !!result || lockedOut} style={{ padding: "10px 14px" }}>
-              Buzz
+              Buzz (Space)
             </button>
           </div>
 
@@ -843,7 +843,7 @@ export default function RoundPage() {
                 placeholder="Type your answer"
               />
               <button onClick={submitAnswer} style={{ padding: "10px 14px", marginTop: 10 }}>
-                Submit
+                Submit (Enter)
               </button>
             </div>
           )}
