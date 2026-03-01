@@ -494,12 +494,15 @@ export default function RoundPage() {
     setAnswer("");
     setLineIndex(0);
 
-    if (qNum >= roundTotal) {
-      void finalizeRound(true);
-      setRoundActive(false);
-      setTossup(null);
-      return;
-    }
+   if (qNum >= roundTotal) {
+  setTimeout(() => {
+    void finalizeRound(true);
+  }, 0);
+
+  setRoundActive(false);
+  setTossup(null);
+  return;
+}
 
     setQNum(qNum + 1);
     loadNextTossup();
