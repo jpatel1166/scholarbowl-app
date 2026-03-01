@@ -49,6 +49,7 @@ export default function DashboardClient() {
   const [sortKey, setSortKey] = useState<"category" | "best" | "last_played">("category");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [practicedToday, setPracticedToday] = useState(true);
+  const [leaderboard, setLeaderboard] = useState<{ name: string; total_badges: number }[]>([]);
 
   // NEW: practice streak
   const [practiceStreak, setPracticeStreak] = useState<number>(0);
@@ -79,6 +80,14 @@ export default function DashboardClient() {
       if (!cancelled) {
         if (pErr) console.error("Error loading practice streak:", pErr.message);
         setPracticeStreak(profile?.practice_streak ?? 0);
+
+        // load leaderboard
+const { data: lbData, error: lbErr } = await supabase.rpc("badge_leaderboard");
+
+if (!cancelled) {
+  if (lbErr) console.error("Leaderboard error:", lbErr.message);
+  setLeaderboard(lbData ?? []);
+}
 
 const today = new Date().toLocaleDateString("en-CA", {
   timeZone: "America/Chicago",
@@ -179,6 +188,40 @@ setPracticedToday(lastDay === today);
           >
             <span style={{ fontSize: 18 }}>🔥</span>
             <span>{practiceStreak} Day Practice Streak</span>
+            {leaderboard.length > 0 && (
+  <div
+    style={{
+      marginTop: 14,
+      border: "1px solid #ddd",
+      borderRadius: 12,
+      padding: 12,
+      background: "#fafafa",
+      maxWidth: 260,
+    }}
+  >
+    <div style={{ fontWeight: 800, marginBottom: 6 }}>🏆 Badge Leaders</div>
+
+    {leaderboard.map((p, i) => (
+      <div
+        key={i}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          fontWeight: 600,
+          padding: "4px 0",
+        }}
+      >
+        <span>
+          {i === 0 && "🥇 "}
+          {i === 1 && "🥈 "}
+          {i === 2 && "🥉 "}
+          {p.name}
+        </span>
+        <span>{p.total_badges}</span>
+      </div>
+    ))}
+  </div>
+)}
           </div>
           {!practicedToday && (
   <div
