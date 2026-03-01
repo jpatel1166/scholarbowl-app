@@ -103,6 +103,7 @@ export default function RoundPage() {
   const [correctCount, setCorrectCount] = useState(0);
   const [powerCount, setPowerCount] = useState(0);
   const [negCount, setNegCount] = useState(0);
+  const correctCountRef = useRef(0);
 
   // Badge message shown in summary
   const [badgeMessage, setBadgeMessage] = useState<string | null>(null);
@@ -412,7 +413,10 @@ export default function RoundPage() {
     await recomputeWeakest();
 
     setScore((s) => s + points);
-    if (correct) setCorrectCount((c) => c + 1);
+    if (correct) {
+  correctCountRef.current += 1;
+  setCorrectCount((c) => c + 1);
+}
     if (isPower) setPowerCount((p) => p + 1);
     if (!correct) setNegCount((n2) => n2 + 1);
   }, [tossup, userId, answer, lineIndex, startMs, recomputeWeakest]);
@@ -420,10 +424,10 @@ export default function RoundPage() {
   // ---------- Save round summary + unlock badges ----------
   const finalizeRound = useCallback(async (completed: boolean) => {
     if (!userId) return;
-
+const finalCorrect = correctCountRef.current;
     // Always compute message (so you get feedback even if they played "All" by accident)
     const total = roundTotal || 20;
-    const earned = tiersEarned(correctCount, total);
+    const earned = tiersEarned(finalCorrect, total);
     const bestTier = earned.length ? earned[earned.length - 1] : null;
 
     const isSingleCategory = !useWeakestMode && categoryFilter !== "all";
@@ -432,7 +436,7 @@ export default function RoundPage() {
       // Helpful message so it doesn't feel "broken"
       if (bestTier) {
         setBadgeMessage(
-          `You would have earned ${tierLabel(bestTier)} (${correctCount}/${total}). Badges unlock only in single-category rounds (use Dashboard → Go).`
+          `You would have earned ${tierLabel(bestTier)} (${finalCorrect}/${total}). Badges unlock only in single-category rounds (use Dashboard → Go).`
         );
       } else {
         setBadgeMessage(`Badges unlock only in single-category rounds (use Dashboard → Go).`);
@@ -444,7 +448,7 @@ export default function RoundPage() {
     const { error } = await supabase.from("practice_rounds").insert({
       user_id: userId,
       category_id: categoryFilter,
-      correct: correctCount,
+      correct: finalCorrect,
       total: roundTotal,
     });
 
@@ -464,7 +468,7 @@ export default function RoundPage() {
           user_id: userId,
           category_id: categoryFilter,
           tier,
-          score: correctCount,
+          score: finalCorrect,
           total,
         }));
 
@@ -476,14 +480,14 @@ export default function RoundPage() {
         if (badgeErr) console.log("Badge unlock upsert:", badgeErr.message);
 
         const top = earned[earned.length - 1];
-        setBadgeMessage(`Badge earned: ${tierLabel(top)} (${correctCount}/${total})`);
+        setBadgeMessage(`Badge earned: ${tierLabel(top)} (${finalCorrect}/${total})`);
       } else {
         setBadgeMessage(null);
       }
     } catch (e) {
       console.error("Badge error", e);
     }
-  }, [userId, useWeakestMode, categoryFilter, correctCount, roundTotal]);
+  }, [userId, useWeakestMode, categoryFilter, roundTotal]);
 
   // ---------- NEXT IN ROUND (saves when round ends) ----------
   const nextInRound = useCallback(() => {
@@ -516,6 +520,7 @@ export default function RoundPage() {
     setCorrectCount(0);
     setPowerCount(0);
     setNegCount(0);
+    correctCountRef.current = 0;
 
     const ids = await fetchAllEligibleIds();
     if (!ids || ids.length === 0) {
@@ -633,6 +638,7 @@ export default function RoundPage() {
     }
 
     setCorrectCount((c) => c + 1);
+    correctCountRef.current += 1;
 
     setResult({ ...result, correct: true, points: 10, isPower: false });
 
