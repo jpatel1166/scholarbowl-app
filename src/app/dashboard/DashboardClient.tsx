@@ -188,7 +188,8 @@ setPracticedToday(lastDay === today);
           >
             <span style={{ fontSize: 18 }}>🔥</span>
             <span>{practiceStreak} Day Practice Streak</span>
-            {leaderboard.length > 0 && (
+          </div>
+          {leaderboard.length > 0 && (
   <div
     style={{
       marginTop: 14,
@@ -222,7 +223,6 @@ setPracticedToday(lastDay === today);
     ))}
   </div>
 )}
-          </div>
           {!practicedToday && (
   <div
     style={{
