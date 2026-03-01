@@ -418,7 +418,7 @@ export default function RoundPage() {
   }, [tossup, userId, answer, lineIndex, startMs, recomputeWeakest]);
 
   // ---------- Save round summary + unlock badges ----------
-  const finalizeRound = useCallback(async () => {
+  const finalizeRound = useCallback(async (completed: boolean) => {
     if (!userId) return;
 
     // Always compute message (so you get feedback even if they played "All" by accident)
@@ -447,6 +447,12 @@ export default function RoundPage() {
       correct: correctCount,
       total: roundTotal,
     });
+
+    // ---- Practice streak (only when a full 20-question round is completed) ----
+    if (completed && roundTotal === 20) {
+      const { error: streakErr } = await supabase.rpc("update_practice_streak");
+      if (streakErr) console.error("Streak update error:", streakErr.message);
+    }
 
     if (error) console.error("Error saving round:", error.message);
 
@@ -489,7 +495,7 @@ export default function RoundPage() {
     setLineIndex(0);
 
     if (qNum >= roundTotal) {
-      void finalizeRound();
+      void finalizeRound(true);
       setRoundActive(false);
       setTossup(null);
       return;
@@ -528,7 +534,7 @@ export default function RoundPage() {
 
   // ---------- End round early (also saves) ----------
   const endRound = useCallback(() => {
-    void finalizeRound();
+    void finalizeRound(false);
 
     setRoundActive(false);
     setTossup(null);
