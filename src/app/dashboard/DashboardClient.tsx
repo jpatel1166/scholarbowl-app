@@ -46,8 +46,12 @@ export default function DashboardClient() {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
-const [sortKey, setSortKey] = useState<"category" | "best" | "last_played">("category");
-const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [sortKey, setSortKey] = useState<"category" | "best" | "last_played">("category");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  // NEW: practice streak
+  const [practiceStreak, setPracticeStreak] = useState<number>(0);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -62,6 +66,18 @@ const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
           setLoading(false);
         }
         return;
+      }
+
+      // NEW: load streak from profiles
+      const { data: profile, error: pErr } = await supabase
+        .from("profiles")
+        .select("practice_streak")
+        .eq("id", userData.user.id)
+        .single();
+
+      if (!cancelled) {
+        if (pErr) console.error("Error loading practice streak:", pErr.message);
+        setPracticeStreak(profile?.practice_streak ?? 0);
       }
 
       const { data, error: qErr } = await supabase.rpc("dashboard_best_by_category");
@@ -93,73 +109,95 @@ const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
     }
     return w;
   }, [rows]);
-const badgeCounts = useMemo(() => {
-  const counts = { Perfect: 0, Gold: 0, Silver: 0, Bronze: 0, Unranked: 0 };
-  for (const r of rows) {
-    const b = badgeFromBest(r.best_correct).label as keyof typeof counts;
-    counts[b] += 1;
-  }
-  return counts;
-}, [rows]);
-const sortedRows = useMemo(() => {
-  const copy = [...rows];
 
-  function cmp(a: Row, b: Row) {
-    if (sortKey === "category") {
-      const av = (a.category_name ?? "").toLowerCase();
-      const bv = (b.category_name ?? "").toLowerCase();
-      return av.localeCompare(bv);
+  const badgeCounts = useMemo(() => {
+    const counts = { Perfect: 0, Gold: 0, Silver: 0, Bronze: 0, Unranked: 0 };
+    for (const r of rows) {
+      const b = badgeFromBest(r.best_correct).label as keyof typeof counts;
+      counts[b] += 1;
+    }
+    return counts;
+  }, [rows]);
+
+  const sortedRows = useMemo(() => {
+    const copy = [...rows];
+
+    function cmp(a: Row, b: Row) {
+      if (sortKey === "category") {
+        const av = (a.category_name ?? "").toLowerCase();
+        const bv = (b.category_name ?? "").toLowerCase();
+        return av.localeCompare(bv);
+      }
+
+      if (sortKey === "best") {
+        return (a.best_correct ?? 0) - (b.best_correct ?? 0);
+      }
+
+      const at = a.last_played_at ? new Date(a.last_played_at).getTime() : 0;
+      const bt = b.last_played_at ? new Date(b.last_played_at).getTime() : 0;
+      return at - bt;
     }
 
-    if (sortKey === "best") {
-      // numeric compare
-      return (a.best_correct ?? 0) - (b.best_correct ?? 0);
-    }
+    copy.sort((a, b) => {
+      const base = cmp(a, b);
+      return sortDir === "asc" ? base : -base;
+    });
 
-    // last_played
-    const at = a.last_played_at ? new Date(a.last_played_at).getTime() : 0;
-    const bt = b.last_played_at ? new Date(b.last_played_at).getTime() : 0;
-    return at - bt;
-  }
+    return copy;
+  }, [rows, sortKey, sortDir]);
 
-  copy.sort((a, b) => {
-    const base = cmp(a, b);
-    return sortDir === "asc" ? base : -base;
-  });
-
-  return copy;
-}, [rows, sortKey, sortDir]);
   return (
     <main style={{ maxWidth: 820, margin: "30px auto", padding: 16, fontFamily: "system-ui" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
         <div>
           <h2 style={{ margin: 0 }}>Dashboard</h2>
           <div style={{ marginTop: 6, color: "#555" }}>Best score per category (out of 20)</div>
+
+          {/* NEW: practice streak */}
+          <div
+            style={{
+              marginTop: 10,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 12px",
+              borderRadius: 999,
+              border: "1px solid #ddd",
+              background: "#fafafa",
+              fontWeight: 800,
+              color: "#111",
+            }}
+          >
+            <span style={{ fontSize: 18 }}>🔥</span>
+            <span>{practiceStreak} Day Practice Streak</span>
+          </div>
         </div>
-<div
-  style={{
-    marginTop: 14,
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap",
-  }}
->
-  <div style={{ border: "1px solid #ddd", borderRadius: 999, padding: "6px 10px", background: "#fafafa" }}>
-    💎 Perfect: <b>{badgeCounts.Perfect}</b>
-  </div>
-  <div style={{ border: "1px solid #ddd", borderRadius: 999, padding: "6px 10px", background: "#fafafa" }}>
-    🥇 Gold: <b>{badgeCounts.Gold}</b>
-  </div>
-  <div style={{ border: "1px solid #ddd", borderRadius: 999, padding: "6px 10px", background: "#fafafa" }}>
-    🥈 Silver: <b>{badgeCounts.Silver}</b>
-  </div>
-  <div style={{ border: "1px solid #ddd", borderRadius: 999, padding: "6px 10px", background: "#fafafa" }}>
-    🥉 Bronze: <b>{badgeCounts.Bronze}</b>
-  </div>
-  <div style={{ border: "1px solid #ddd", borderRadius: 999, padding: "6px 10px", background: "#fafafa" }}>
-    ⬜ Unranked: <b>{badgeCounts.Unranked}</b>
-  </div>
-</div>
+
+        <div
+          style={{
+            marginTop: 14,
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ border: "1px solid #ddd", borderRadius: 999, padding: "6px 10px", background: "#fafafa" }}>
+            💎 Perfect: <b>{badgeCounts.Perfect}</b>
+          </div>
+          <div style={{ border: "1px solid #ddd", borderRadius: 999, padding: "6px 10px", background: "#fafafa" }}>
+            🥇 Gold: <b>{badgeCounts.Gold}</b>
+          </div>
+          <div style={{ border: "1px solid #ddd", borderRadius: 999, padding: "6px 10px", background: "#fafafa" }}>
+            🥈 Silver: <b>{badgeCounts.Silver}</b>
+          </div>
+          <div style={{ border: "1px solid #ddd", borderRadius: 999, padding: "6px 10px", background: "#fafafa" }}>
+            🥉 Bronze: <b>{badgeCounts.Bronze}</b>
+          </div>
+          <div style={{ border: "1px solid #ddd", borderRadius: 999, padding: "6px 10px", background: "#fafafa" }}>
+            ⬜ Unranked: <b>{badgeCounts.Unranked}</b>
+          </div>
+        </div>
+
         {weakest ? (
           <Link
             href={`/round?category_id=${encodeURIComponent(weakest.category_id)}&n=20`}
@@ -214,49 +252,49 @@ const sortedRows = useMemo(() => {
               color: "#555",
             }}
           >
-      <button
-  type="button"
-  onClick={() => {
-    if (sortKey === "category") setSortDir(sortDir === "asc" ? "desc" : "asc");
-    else {
-      setSortKey("category");
-      setSortDir("asc");
-    }
-  }}
-  style={{ textAlign: "left", background: "transparent", border: "none", padding: 0, fontWeight: 700, color: "#555", cursor: "pointer" }}
->
-  Category {sortArrow(sortKey === "category", sortDir)}
-</button>
+            <button
+              type="button"
+              onClick={() => {
+                if (sortKey === "category") setSortDir(sortDir === "asc" ? "desc" : "asc");
+                else {
+                  setSortKey("category");
+                  setSortDir("asc");
+                }
+              }}
+              style={{ textAlign: "left", background: "transparent", border: "none", padding: 0, fontWeight: 700, color: "#555", cursor: "pointer" }}
+            >
+              Category {sortArrow(sortKey === "category", sortDir)}
+            </button>
 
-<button
-  type="button"
-  onClick={() => {
-    if (sortKey === "best") setSortDir(sortDir === "asc" ? "desc" : "asc");
-    else {
-      setSortKey("best");
-      setSortDir("desc");
-    }
-  }}
-  style={{ textAlign: "left", background: "transparent", border: "none", padding: 0, fontWeight: 700, color: "#555", cursor: "pointer" }}
->
-  Best {sortArrow(sortKey === "best", sortDir)}
-</button>
+            <button
+              type="button"
+              onClick={() => {
+                if (sortKey === "best") setSortDir(sortDir === "asc" ? "desc" : "asc");
+                else {
+                  setSortKey("best");
+                  setSortDir("desc");
+                }
+              }}
+              style={{ textAlign: "left", background: "transparent", border: "none", padding: 0, fontWeight: 700, color: "#555", cursor: "pointer" }}
+            >
+              Best {sortArrow(sortKey === "best", sortDir)}
+            </button>
 
-<button
-  type="button"
-  onClick={() => {
-    if (sortKey === "last_played") setSortDir(sortDir === "asc" ? "desc" : "asc");
-    else {
-      setSortKey("last_played");
-      setSortDir("desc");
-    }
-  }}
-  style={{ textAlign: "left", background: "transparent", border: "none", padding: 0, fontWeight: 700, color: "#555", cursor: "pointer" }}
->
-  Last Played {sortArrow(sortKey === "last_played", sortDir)}
-</button>
+            <button
+              type="button"
+              onClick={() => {
+                if (sortKey === "last_played") setSortDir(sortDir === "asc" ? "desc" : "asc");
+                else {
+                  setSortKey("last_played");
+                  setSortDir("desc");
+                }
+              }}
+              style={{ textAlign: "left", background: "transparent", border: "none", padding: 0, fontWeight: 700, color: "#555", cursor: "pointer" }}
+            >
+              Last Played {sortArrow(sortKey === "last_played", sortDir)}
+            </button>
 
-<div style={{ textAlign: "right" }}>Practice</div>
+            <div style={{ textAlign: "right" }}>Practice</div>
           </div>
 
           {sortedRows.map((r) => (
@@ -270,35 +308,33 @@ const sortedRows = useMemo(() => {
                 alignItems: "center",
               }}
             >
-  <div>
-  <div style={{ fontWeight: 700 }}>{r.category_name}</div>
+              <div>
+                <div style={{ fontWeight: 700 }}>{r.category_name}</div>
 
-  <div style={{ marginTop: 6, height: 8, background: "#eee", borderRadius: 999, overflow: "hidden" }}>
-    <div
-      style={{
-        height: "100%",
-        width: `${pct(r.best_correct, r.total)}%`,
-        background: "#111",
-      }}
-    />
-  </div>
+                <div style={{ marginTop: 6, height: 8, background: "#eee", borderRadius: 999, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${pct(r.best_correct, r.total)}%`,
+                      background: "#111",
+                    }}
+                  />
+                </div>
 
-  <div style={{ marginTop: 6, fontSize: 12, color: "#666" }}>
-    {badgeFromBest(r.best_correct).emoji} {badgeFromBest(r.best_correct).label}
-    {nextTarget(r.best_correct)
-      ? ` • ${nextTarget(r.best_correct)!.need} more for ${nextTarget(r.best_correct)!.label}`
-      : " • Maxed"}
-    {" • "}
-    {pct(r.best_correct, r.total)}%
-  </div>
-</div>
+                <div style={{ marginTop: 6, fontSize: 12, color: "#666" }}>
+                  {badgeFromBest(r.best_correct).emoji} {badgeFromBest(r.best_correct).label}
+                  {nextTarget(r.best_correct) ? ` • ${nextTarget(r.best_correct)!.need} more for ${nextTarget(r.best_correct)!.label}` : " • Maxed"}
+                  {" • "}
+                  {pct(r.best_correct, r.total)}%
+                </div>
+              </div>
 
-<div style={{ color: "#333", fontWeight: 700 }}>
-  {r.best_correct}/{r.total}
-</div>
-<div style={{ fontSize: 12, color: "#555" }}>
-  {formatLastPlayed(r.last_played_at)}
-</div>
+              <div style={{ color: "#333", fontWeight: 700 }}>
+                {r.best_correct}/{r.total}
+              </div>
+              <div style={{ fontSize: 12, color: "#555" }}>
+                {formatLastPlayed(r.last_played_at)}
+              </div>
               <div style={{ textAlign: "right" }}>
                 <Link
                   href={`/round?category_id=${encodeURIComponent(r.category_id)}&n=20`}
