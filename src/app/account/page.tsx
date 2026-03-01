@@ -26,15 +26,13 @@ export default function Account() {
       <h2>Account</h2>
       <p>Signed in as: <b>{email}</b></p>
 
-      <div style={{ display: "flex", gap: 14, marginTop: 14 }}>
-        <button onClick={logout} style={{ padding: "10px 14px" }}>Log out</button>
-        <Link href="/play">Back to Tossups</Link>
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/play">Play</Link>
-          <Link href="/account">Account</Link>
-          <Link href="/coach">Coach</Link>
-          <Link href="/stats">Stats</Link>
-      </div>
+   <div style={{ display: "flex", gap: 14, marginTop: 14 }}>
+  <button onClick={logout} style={{ padding: "10px 14px" }}>Log out</button>
+  <Link href="/dashboard">Dashboard</Link>
+  <Link href="/play">Play</Link>
+  <Link href="/account">Account</Link>
+  <Link href="/stats">Stats</Link>
+</div>
     </main>
   );
 }
