@@ -385,6 +385,16 @@ export default function RoundPage() {
     }
 
     setResult({ correct, correctAnswer: tossup.answer, points, isPower });
+    // ✅ Update counters immediately so finalizeRound sees the right totals
+setScore((s) => s + points);
+
+if (correct) {
+  correctCountRef.current += 1;
+  setCorrectCount((c) => c + 1);
+}
+
+if (isPower) setPowerCount((p) => p + 1);
+if (!correct) setNegCount((n2) => n2 + 1);
 
     const elapsed = (Date.now() - startMs) / 1000;
 
@@ -412,13 +422,7 @@ export default function RoundPage() {
 
     await recomputeWeakest();
 
-    setScore((s) => s + points);
-    if (correct) {
-  correctCountRef.current += 1;
-  setCorrectCount((c) => c + 1);
-}
-    if (isPower) setPowerCount((p) => p + 1);
-    if (!correct) setNegCount((n2) => n2 + 1);
+ 
   }, [tossup, userId, answer, lineIndex, startMs, recomputeWeakest]);
 
   // ---------- Save round summary + unlock badges ----------
