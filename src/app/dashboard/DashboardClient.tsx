@@ -213,9 +213,9 @@ setPracticedToday(lastDay === today);
         }}
       >
         <span>
-          {i === 0 && "🥇 "}
-          {i === 1 && "🥈 "}
-          {i === 2 && "🥉 "}
+          {i === 0 && "1️⃣ "}
+          {i === 1 && "2️⃣ "}
+          {i === 2 && "3️⃣ "}
           {p.name}
         </span>
         <span>{p.total_badges}</span>
