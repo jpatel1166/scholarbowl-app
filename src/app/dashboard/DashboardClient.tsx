@@ -48,6 +48,7 @@ export default function DashboardClient() {
   const [error, setError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<"category" | "best" | "last_played">("category");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [practicedToday, setPracticedToday] = useState(true);
 
   // NEW: practice streak
   const [practiceStreak, setPracticeStreak] = useState<number>(0);
@@ -71,13 +72,21 @@ export default function DashboardClient() {
       // NEW: load streak from profiles
       const { data: profile, error: pErr } = await supabase
         .from("profiles")
-        .select("practice_streak")
+        .select("practice_streak,last_practice_day")
         .eq("id", userData.user.id)
         .single();
 
       if (!cancelled) {
         if (pErr) console.error("Error loading practice streak:", pErr.message);
         setPracticeStreak(profile?.practice_streak ?? 0);
+
+const today = new Date().toLocaleDateString("en-CA", {
+  timeZone: "America/Chicago",
+});
+
+const lastDay = profile?.last_practice_day;
+
+setPracticedToday(lastDay === today);
       }
 
       const { data, error: qErr } = await supabase.rpc("dashboard_best_by_category");
@@ -151,7 +160,7 @@ export default function DashboardClient() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
         <div>
           <h2 style={{ margin: 0 }}>Dashboard</h2>
-          <div style={{ marginTop: 6, color: "#555" }}>Best score per category (out of 20)</div>
+          <div style={{ marginTop: 6, color: "#555" }}>Complete a full round each day to keep your streak going</div>
 
           {/* NEW: practice streak */}
           <div
@@ -171,6 +180,22 @@ export default function DashboardClient() {
             <span style={{ fontSize: 18 }}>🔥</span>
             <span>{practiceStreak} Day Practice Streak</span>
           </div>
+          {!practicedToday && (
+  <div
+    style={{
+      marginTop: 10,
+      padding: "10px 14px",
+      borderRadius: 10,
+      background: "#fff3cd",
+      border: "1px solid #ffeeba",
+      fontWeight: 700,
+      color: "#856404",
+      display: "inline-block",
+    }}
+  >
+    ⚠️ Practice today to keep your streak alive.
+  </div>
+)}
         </div>
 
         <div
