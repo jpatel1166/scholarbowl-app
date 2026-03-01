@@ -160,7 +160,7 @@ setPracticedToday(lastDay === today);
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
         <div>
           <h2 style={{ margin: 0 }}>Dashboard</h2>
-          <div style={{ marginTop: 6, color: "#555" }}>Complete a full round each day to keep your streak going</div>
+          
 
           {/* NEW: practice streak */}
           <div
@@ -193,7 +193,7 @@ setPracticedToday(lastDay === today);
       display: "inline-block",
     }}
   >
-    ⚠️ Practice today to keep your streak alive.
+    ⚠️ Complete a full round today to keep your streak alive.
   </div>
 )}
         </div>
