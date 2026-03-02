@@ -4,6 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
+type TeamWeakRow = {
+  category_id: string;
+  category_name: string;
+  students_with_badge: number;
+  total_students: number;
+};
+
+const [teamWeak, setTeamWeak] = useState<TeamWeakRow[]>([]);
+
 type Row = {
   category_id: string;
   category_name: string;
@@ -81,6 +90,11 @@ export default function DashboardClient() {
         if (pErr) console.error("Error loading practice streak:", pErr.message);
         setPracticeStreak(profile?.practice_streak ?? 0);
 
+const { data: weakData, error: weakErr } = await supabase.rpc("team_weak_categories");
+if (!cancelled) {
+  if (weakErr) console.error("Team weak categories error:", weakErr.message);
+  setTeamWeak((weakData ?? []) as TeamWeakRow[]);
+}
         // load leaderboard
 const { data: lbData, error: lbErr } = await supabase.rpc("badge_leaderboard");
 
@@ -94,7 +108,59 @@ const today = new Date().toLocaleDateString("en-CA", {
 });
 
 const lastDay = profile?.last_practice_day;
+{teamWeak.length > 0 && (
+  <div
+    style={{
+      marginTop: 14,
+      border: "1px solid #ddd",
+      borderRadius: 12,
+      padding: 12,
+      background: "#fafafa",
+      maxWidth: 360,
+    }}
+  >
+    <div style={{ fontWeight: 800, marginBottom: 6 }}>🧠 Team Weak Categories</div>
+    <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+      Based on how many students have earned at least one badge in each category.
+    </div>
 
+    {teamWeak.map((c) => (
+      <div
+        key={c.category_id}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "6px 0",
+          borderTop: "1px solid #eee",
+        }}
+      >
+        <div>
+          <div style={{ fontWeight: 700 }}>{c.category_name}</div>
+          <div style={{ fontSize: 12, color: "#666" }}>
+            Coverage: {c.students_with_badge}/{c.total_students}
+          </div>
+        </div>
+
+        <Link
+          href={`/round?category_id=${encodeURIComponent(c.category_id)}&n=20`}
+          style={{
+            display: "inline-block",
+            padding: "6px 10px",
+            borderRadius: 10,
+            border: "1px solid #ccc",
+            textDecoration: "none",
+            fontWeight: 800,
+            color: "#111",
+            background: "white",
+          }}
+        >
+          Practice
+        </Link>
+      </div>
+    ))}
+  </div>
+)}
 setPracticedToday(lastDay === today);
       }
 

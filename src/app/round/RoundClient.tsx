@@ -896,7 +896,7 @@ const finalCorrect = correctCountRef.current;
           {result && (
             <div style={{ marginTop: 14, borderTop: "1px solid #eee", paddingTop: 12 }}>
               <p style={{ margin: "8px 0" }}>
-                Result: <b>{result.correct ? "Correct" : "Incorrect"}</b>{" "}
+                Result: <b>{result.correct ? "✓ Correct" : "✗ Incorrect"}</b>{" "}
                 <span style={{ color: "#777" }}>({pointsText(result.points)} points)</span>
                 {result.isPower ? (
                   <span style={{ marginLeft: 10 }}>
