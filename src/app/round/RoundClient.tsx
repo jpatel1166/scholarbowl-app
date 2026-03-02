@@ -24,7 +24,28 @@ function tierLabel(t: BadgeTier) {
   if (t === "gold") return "Gold";
   return "Perfect";
 }
+function answerInputStyle(result: null | { correct: boolean }) {
+  if (!result) {
+    return {
+      width: "100%",
+      padding: 10,
+      marginTop: 6,
+      border: "1px solid #ccc",
+      borderRadius: 8,
+      outline: "none",
+    } as const;
+  }
 
+  return {
+    width: "100%",
+    padding: 10,
+    marginTop: 6,
+    border: `2px solid ${result.correct ? "#16a34a" : "#dc2626"}`, // green / red
+    borderRadius: 8,
+    background: result.correct ? "#f0fdf4" : "#fef2f2", // light green / light red
+    outline: "none",
+  } as const;
+}
 type Tossup = {
   id: string;
   set_id: string;
@@ -301,7 +322,7 @@ export default function RoundPage() {
     if (isLastLineVisible) return;
 
     const lastIndex = tossup.prompt_lines.length - 1;
-    const delayMs = 3000;
+    const delayMs = 2000;
 
     const id = setTimeout(() => {
       setLineIndex((prev) => {
@@ -853,19 +874,22 @@ const finalCorrect = correctCountRef.current;
 
           {lockedOut && <p style={{ marginTop: 10 }}>You negged — locked out for this tossup. Continue to the next question.</p>}
 
-          {buzzed && !result && (
+          {buzzed && (
             <div style={{ marginTop: 14 }}>
               <label>Your answer:</label>
-              <input
-                ref={answerInputRef}
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                style={{ width: "100%", padding: 10, marginTop: 6 }}
-                placeholder="Type your answer"
-              />
-              <button onClick={submitAnswer} style={{ padding: "10px 14px", marginTop: 10 }}>
-                Submit (Enter)
-              </button>
+           <input
+  ref={answerInputRef}
+  value={answer}
+  onChange={(e) => setAnswer(e.target.value)}
+  style={answerInputStyle(result)}
+  placeholder="Type your answer"
+  disabled={!!result}
+/>
+             {!result && (
+  <button onClick={submitAnswer} style={{ padding: "10px 14px", marginTop: 10 }}>
+    Submit (Enter)
+  </button>
+)}
             </div>
           )}
 

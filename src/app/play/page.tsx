@@ -272,7 +272,7 @@ const [scorePop, setScorePop] = useState<number | null>(null);
     if (isLastLineVisible) return;
 
     const lastIndex = tossup.prompt_lines.length - 1;
-    const delayMs = lineIndex < 2 ? 3000 : 3000;
+    const delayMs = lineIndex < 2 ? 2000 : 2000;
 
     const id = setTimeout(() => {
       setLineIndex((prev) => {
