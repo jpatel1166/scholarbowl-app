@@ -874,7 +874,7 @@ const finalCorrect = correctCountRef.current;
 
           {lockedOut && <p style={{ marginTop: 10 }}>You negged — locked out for this tossup. Continue to the next question.</p>}
 
-          {buzzed && (
+          {(buzzed || !!result) && (
             <div style={{ marginTop: 14 }}>
               <label>Your answer:</label>
            <input
