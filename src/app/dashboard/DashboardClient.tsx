@@ -24,6 +24,7 @@ type Row = {
   best_correct: number;
   total: number;
   last_played_at: string | null;
+  question_count?: number; // NEW
 };
 
 function badgeFromBest(best: number) {
@@ -167,6 +168,7 @@ export default function DashboardClient() {
 
       // ----- Category table data -----
       const { data, error: qErr } = await supabase.rpc("dashboard_best_by_category");
+      
       if (qErr) {
         if (!cancelled) {
           setError(qErr.message);
@@ -174,11 +176,23 @@ export default function DashboardClient() {
         }
         return;
       }
+const { data: countData, error: countErr } = await supabase.rpc("category_question_counts");
+if (countErr) console.error("Question count error:", countErr.message);
 
-      if (!cancelled) {
-        setRows((data ?? []) as Row[]);
-        setLoading(false);
-      }
+const countMap = new Map<string, number>(
+  (countData ?? []).map((r: any) => [r.category_id, r.question_count])
+);
+
+const merged = ((data ?? []) as Row[]).map((r) => ({
+  ...r,
+  question_count: countMap.get(r.category_id) ?? 0,
+}));
+
+if (!cancelled) {
+  setRows(merged);
+  setLoading(false);
+}
+     
     }
 
     load();
@@ -562,7 +576,12 @@ export default function DashboardClient() {
               }}
             >
               <div>
-                <div style={{ fontWeight: 800 }}>{r.category_name}</div>
+                <div style={{ fontWeight: 700 }}>
+  {r.category_name}{" "}
+  <span style={{ fontWeight: 600, color: "#666" }}>
+    ({r.question_count ?? 0})
+  </span>
+</div>
 
                 <div style={{ marginTop: 6, height: 8, background: "#eee", borderRadius: 999, overflow: "hidden" }}>
                   <div
