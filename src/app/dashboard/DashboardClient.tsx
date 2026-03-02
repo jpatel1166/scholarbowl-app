@@ -300,19 +300,20 @@ export default function DashboardClient() {
                     <div
                       key={c.category_id}
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "6px 0",
-                        borderTop: idx === 0 ? "none" : "1px solid #eee",
-                      }}
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: "4px 0",
+  borderTop: "1px solid #eee",
+  gap: 10,
+}}
                     >
                      <div style={{ flex: 1, paddingRight: 10 }}>
   <div style={{ fontWeight: 700 }}>{c.category_name}</div>
 
-  <div style={{ fontSize: 12, color: "#666" }}>
-    Coverage: {c.students_with_badge}/{c.total_students}
-  </div>
+ <div style={{ fontSize: 12, color: "#666", lineHeight: 1.1 }}>
+  Coverage: {c.students_with_badge}/{c.total_students}
+</div>
 
   <div style={{ marginTop: 6, height: 8, background: "#eee", borderRadius: 999, overflow: "hidden" }}>
     <div
@@ -328,15 +329,17 @@ export default function DashboardClient() {
                       <Link
                         href={`/round?category_id=${encodeURIComponent(c.category_id)}&n=20`}
                         style={{
-                          display: "inline-block",
-                          padding: "6px 10px",
-                          borderRadius: 10,
-                          border: "1px solid #ccc",
-                          textDecoration: "none",
-                          fontWeight: 800,
-                          color: "#111",
-                          background: "white",
-                        }}
+  display: "inline-block",
+  padding: "5px 10px",
+  borderRadius: 10,
+  border: "1px solid #ccc",
+  textDecoration: "none",
+  fontWeight: 800,
+  color: "#111",
+  background: "white",
+  minWidth: 54,
+  textAlign: "center",
+}}
                       >
                         Go
                       </Link>
