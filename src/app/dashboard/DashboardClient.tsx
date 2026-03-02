@@ -106,61 +106,9 @@ const today = new Date().toLocaleDateString("en-CA", {
   timeZone: "America/Chicago",
 });
 
-const lastDay = profile?.last_practice_day;
-{teamWeak.length > 0 && (
-  <div
-    style={{
-      marginTop: 14,
-      border: "1px solid #ddd",
-      borderRadius: 12,
-      padding: 12,
-      background: "#fafafa",
-      maxWidth: 360,
-    }}
-  >
-    <div style={{ fontWeight: 800, marginBottom: 6 }}>🧠 Team Weak Categories</div>
-    <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
-      Based on how many students have earned at least one badge in each category.
-    </div>
 
-    {teamWeak.map((c) => (
-      <div
-        key={c.category_id}
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "6px 0",
-          borderTop: "1px solid #eee",
-        }}
-      >
-        <div>
-          <div style={{ fontWeight: 700 }}>{c.category_name}</div>
-          <div style={{ fontSize: 12, color: "#666" }}>
-            Coverage: {c.students_with_badge}/{c.total_students}
-          </div>
-        </div>
 
-        <Link
-          href={`/round?category_id=${encodeURIComponent(c.category_id)}&n=20`}
-          style={{
-            display: "inline-block",
-            padding: "6px 10px",
-            borderRadius: 10,
-            border: "1px solid #ccc",
-            textDecoration: "none",
-            fontWeight: 800,
-            color: "#111",
-            background: "white",
-          }}
-        >
-          Practice
-        </Link>
-      </div>
-    ))}
-  </div>
-)}
-setPracticedToday(lastDay === today);
+
       }
 
       const { data, error: qErr } = await supabase.rpc("dashboard_best_by_category");
@@ -371,7 +319,59 @@ setPracticedToday(lastDay === today);
           <b>Error:</b> {error}
         </div>
       )}
+{teamWeak.length > 0 && (
+  <div
+    style={{
+      marginTop: 14,
+      border: "1px solid #ddd",
+      borderRadius: 12,
+      padding: 12,
+      background: "#fafafa",
+      maxWidth: 360,
+    }}
+  >
+    <div style={{ fontWeight: 800, marginBottom: 6 }}>🧠 Team Weak Categories</div>
+    <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+      Based on how many students have earned at least one badge in each category.
+    </div>
 
+    {teamWeak.map((c) => (
+      <div
+        key={c.category_id}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "6px 0",
+          borderTop: "1px solid #eee",
+        }}
+      >
+        <div>
+          <div style={{ fontWeight: 700 }}>{c.category_name}</div>
+          <div style={{ fontSize: 12, color: "#666" }}>
+            Coverage: {c.students_with_badge}/{c.total_students}
+          </div>
+        </div>
+
+        <Link
+          href={`/round?category_id=${encodeURIComponent(c.category_id)}&n=20`}
+          style={{
+            display: "inline-block",
+            padding: "6px 10px",
+            borderRadius: 10,
+            border: "1px solid #ccc",
+            textDecoration: "none",
+            fontWeight: 800,
+            color: "#111",
+            background: "white",
+          }}
+        >
+          Practice
+        </Link>
+      </div>
+    ))}
+  </div>
+)}
       {!loading && !error && (
         <div style={{ marginTop: 18, border: "1px solid #ddd", borderRadius: 12, overflow: "hidden" }}>
           <div
