@@ -314,7 +314,7 @@ export default function DashboardClient() {
                           background: "white",
                         }}
                       >
-                        Practice
+                        Go
                       </Link>
                     </div>
                   ))}
