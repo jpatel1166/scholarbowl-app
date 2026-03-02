@@ -18,6 +18,7 @@ type Row = {
   total: number;
   last_played_at: string | null;
 };
+
 function badgeFromBest(best: number) {
   if (best >= 20) return { label: "Perfect", emoji: "💎" };
   if (best >= 18) return { label: "Gold", emoji: "🥇" };
@@ -33,6 +34,7 @@ function nextTarget(best: number) {
   if (best < 18) return { label: "Gold", need: 18 - best };
   return { label: "Perfect", need: 20 - best };
 }
+
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
@@ -41,14 +43,17 @@ function pct(best: number, total: number) {
   if (!total) return 0;
   return clamp(Math.round((best / total) * 100), 0, 100);
 }
+
 function formatLastPlayed(ts: string | null) {
   if (!ts) return "—";
   return new Date(ts).toLocaleString("en-US", { timeZone: "America/Chicago" });
 }
+
 function sortArrow(active: boolean, dir: "asc" | "desc") {
   if (!active) return "↕";
   return dir === "asc" ? "↑" : "↓";
 }
+
 export default function DashboardClient() {
   const [teamWeak, setTeamWeak] = useState<TeamWeakRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,39 +83,31 @@ export default function DashboardClient() {
         return;
       }
 
-      // NEW: load streak from profiles
+      // Load profile streak + last day
       const { data: profile, error: pErr } = await supabase
         .from("profiles")
         .select("practice_streak,last_practice_day")
         .eq("id", userData.user.id)
         .single();
 
-      if (!cancelled) {
-        if (pErr) console.error("Error loading practice streak:", pErr.message);
-        setPracticeStreak(profile?.practice_streak ?? 0);
+      if (pErr) console.error("Error loading practice streak:", pErr.message);
+      setPracticeStreak(profile?.practice_streak ?? 0);
 
-const { data: weakData, error: weakErr } = await supabase.rpc("team_weak_categories");
-if (!cancelled) {
-  if (weakErr) console.error("Team weak categories error:", weakErr.message);
-  setTeamWeak((weakData ?? []) as TeamWeakRow[]);
-}
-        // load leaderboard
-const { data: lbData, error: lbErr } = await supabase.rpc("badge_leaderboard");
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+      const lastDay = profile?.last_practice_day ?? null;
+      setPracticedToday(lastDay === today);
 
-if (!cancelled) {
-  if (lbErr) console.error("Leaderboard error:", lbErr.message);
-  setLeaderboard(lbData ?? []);
-}
+      // Team weak categories
+      const { data: weakData, error: weakErr } = await supabase.rpc("team_weak_categories");
+      if (weakErr) console.error("Team weak categories error:", weakErr.message);
+      setTeamWeak((weakData ?? []) as TeamWeakRow[]);
 
-const today = new Date().toLocaleDateString("en-CA", {
-  timeZone: "America/Chicago",
-});
+      // Badge leaderboard
+      const { data: lbData, error: lbErr } = await supabase.rpc("badge_leaderboard");
+      if (lbErr) console.error("Leaderboard error:", lbErr.message);
+      setLeaderboard((lbData ?? []) as { name: string; total_badges: number }[]);
 
-
-
-
-      }
-
+      // Main dashboard rows
       const { data, error: qErr } = await supabase.rpc("dashboard_best_by_category");
       if (qErr) {
         if (!cancelled) {
@@ -177,14 +174,17 @@ const today = new Date().toLocaleDateString("en-CA", {
     return copy;
   }, [rows, sortKey, sortDir]);
 
+  const teamWeakTop10 = useMemo(() => {
+    return [...teamWeak].slice(0, 10);
+  }, [teamWeak]);
+
   return (
     <main style={{ maxWidth: 820, margin: "30px auto", padding: 16, fontFamily: "system-ui" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
         <div>
           <h2 style={{ margin: 0 }}>Dashboard</h2>
-          
 
-          {/* NEW: practice streak */}
+          {/* Practice streak */}
           <div
             style={{
               marginTop: 10,
@@ -202,56 +202,126 @@ const today = new Date().toLocaleDateString("en-CA", {
             <span style={{ fontSize: 18 }}>🔥</span>
             <span>{practiceStreak} Day Practice Streak</span>
           </div>
-          {leaderboard.length > 0 && (
-  <div
-    style={{
-      marginTop: 14,
-      border: "1px solid #ddd",
-      borderRadius: 12,
-      padding: 12,
-      background: "#fafafa",
-      maxWidth: 260,
-    }}
-  >
-    <div style={{ fontWeight: 800, marginBottom: 6 }}>🏆 Badge Leaders</div>
 
-    {leaderboard.map((p, i) => (
-      <div
-        key={i}
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          fontWeight: 600,
-          padding: "4px 0",
-        }}
-      >
-        <span>
-          {i === 0 && "1️⃣ "}
-          {i === 1 && "2️⃣ "}
-          {i === 2 && "3️⃣ "}
-          {p.name}
-        </span>
-        <span>{p.total_badges}</span>
-      </div>
-    ))}
-  </div>
-)}
-          {!practicedToday && (
-  <div
-    style={{
-      marginTop: 10,
-      padding: "10px 14px",
-      borderRadius: 10,
-      background: "#fff3cd",
-      border: "1px solid #ffeeba",
-      fontWeight: 700,
-      color: "#856404",
-      display: "inline-block",
-    }}
-  >
-    ⚠️ Complete a full round today to keep your streak alive.
-  </div>
-)}
+          {/* Badge Leaders + Team Weak (side-by-side) */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: 14,
+              alignItems: "start",
+              marginTop: 12,
+              maxWidth: 760,
+            }}
+          >
+            {/* LEFT: Badge Leaders */}
+            <div>
+              {leaderboard.length > 0 && (
+                <div
+                  style={{
+                    border: "1px solid #ddd",
+                    borderRadius: 12,
+                    padding: 12,
+                    background: "#fafafa",
+                  }}
+                >
+                  <div style={{ fontWeight: 800, marginBottom: 6 }}>🏆 Badge Leaders</div>
+
+                  {leaderboard.map((p, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontWeight: 600,
+                        padding: "4px 0",
+                      }}
+                    >
+                      <span>
+                        {i === 0 && "1️⃣ "}
+                        {i === 1 && "2️⃣ "}
+                        {i === 2 && "3️⃣ "}
+                        {p.name}
+                      </span>
+                      <span>{p.total_badges}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!practicedToday && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    background: "#fff3cd",
+                    border: "1px solid #ffeeba",
+                    fontWeight: 700,
+                    color: "#856404",
+                    display: "inline-block",
+                  }}
+                >
+                  ⚠️ Complete a full round today to keep your streak alive.
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT: Team Weak Categories (top 10) */}
+            <div>
+              {teamWeakTop10.length > 0 && (
+                <div
+                  style={{
+                    border: "1px solid #ddd",
+                    borderRadius: 12,
+                    padding: 12,
+                    background: "#fafafa",
+                  }}
+                >
+                  <div style={{ fontWeight: 800, marginBottom: 6 }}>🧠 Team Weak Categories</div>
+                  <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+                    Based on how many students have earned at least one badge in each category.
+                  </div>
+
+                  {teamWeakTop10.map((c, idx) => (
+                    <div
+                      key={c.category_id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "6px 0",
+                        borderTop: idx === 0 ? "none" : "1px solid #eee",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{c.category_name}</div>
+                        <div style={{ fontSize: 12, color: "#666" }}>
+                          Coverage: {c.students_with_badge}/{c.total_students}
+                        </div>
+                      </div>
+
+                      <Link
+                        href={`/round?category_id=${encodeURIComponent(c.category_id)}&n=20`}
+                        style={{
+                          display: "inline-block",
+                          padding: "6px 10px",
+                          borderRadius: 10,
+                          border: "1px solid #ccc",
+                          textDecoration: "none",
+                          fontWeight: 800,
+                          color: "#111",
+                          background: "white",
+                        }}
+                      >
+                        Practice
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div
@@ -319,59 +389,7 @@ const today = new Date().toLocaleDateString("en-CA", {
           <b>Error:</b> {error}
         </div>
       )}
-{teamWeak.length > 0 && (
-  <div
-    style={{
-      marginTop: 14,
-      border: "1px solid #ddd",
-      borderRadius: 12,
-      padding: 12,
-      background: "#fafafa",
-      maxWidth: 360,
-    }}
-  >
-    <div style={{ fontWeight: 800, marginBottom: 6 }}>🧠 Team Weak Categories</div>
-    <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
-      Based on how many students have earned at least one badge in each category.
-    </div>
 
-    {teamWeak.map((c) => (
-      <div
-        key={c.category_id}
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "6px 0",
-          borderTop: "1px solid #eee",
-        }}
-      >
-        <div>
-          <div style={{ fontWeight: 700 }}>{c.category_name}</div>
-          <div style={{ fontSize: 12, color: "#666" }}>
-            Coverage: {c.students_with_badge}/{c.total_students}
-          </div>
-        </div>
-
-        <Link
-          href={`/round?category_id=${encodeURIComponent(c.category_id)}&n=20`}
-          style={{
-            display: "inline-block",
-            padding: "6px 10px",
-            borderRadius: 10,
-            border: "1px solid #ccc",
-            textDecoration: "none",
-            fontWeight: 800,
-            color: "#111",
-            background: "white",
-          }}
-        >
-          Practice
-        </Link>
-      </div>
-    ))}
-  </div>
-)}
       {!loading && !error && (
         <div style={{ marginTop: 18, border: "1px solid #ddd", borderRadius: 12, overflow: "hidden" }}>
           <div
@@ -394,7 +412,15 @@ const today = new Date().toLocaleDateString("en-CA", {
                   setSortDir("asc");
                 }
               }}
-              style={{ textAlign: "left", background: "transparent", border: "none", padding: 0, fontWeight: 700, color: "#555", cursor: "pointer" }}
+              style={{
+                textAlign: "left",
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                fontWeight: 700,
+                color: "#555",
+                cursor: "pointer",
+              }}
             >
               Category {sortArrow(sortKey === "category", sortDir)}
             </button>
@@ -408,7 +434,15 @@ const today = new Date().toLocaleDateString("en-CA", {
                   setSortDir("desc");
                 }
               }}
-              style={{ textAlign: "left", background: "transparent", border: "none", padding: 0, fontWeight: 700, color: "#555", cursor: "pointer" }}
+              style={{
+                textAlign: "left",
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                fontWeight: 700,
+                color: "#555",
+                cursor: "pointer",
+              }}
             >
               Best {sortArrow(sortKey === "best", sortDir)}
             </button>
@@ -422,7 +456,15 @@ const today = new Date().toLocaleDateString("en-CA", {
                   setSortDir("desc");
                 }
               }}
-              style={{ textAlign: "left", background: "transparent", border: "none", padding: 0, fontWeight: 700, color: "#555", cursor: "pointer" }}
+              style={{
+                textAlign: "left",
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                fontWeight: 700,
+                color: "#555",
+                cursor: "pointer",
+              }}
             >
               Last Played {sortArrow(sortKey === "last_played", sortDir)}
             </button>
@@ -456,7 +498,9 @@ const today = new Date().toLocaleDateString("en-CA", {
 
                 <div style={{ marginTop: 6, fontSize: 12, color: "#666" }}>
                   {badgeFromBest(r.best_correct).emoji} {badgeFromBest(r.best_correct).label}
-                  {nextTarget(r.best_correct) ? ` • ${nextTarget(r.best_correct)!.need} more for ${nextTarget(r.best_correct)!.label}` : " • Maxed"}
+                  {nextTarget(r.best_correct)
+                    ? ` • ${nextTarget(r.best_correct)!.need} more for ${nextTarget(r.best_correct)!.label}`
+                    : " • Maxed"}
                   {" • "}
                   {pct(r.best_correct, r.total)}%
                 </div>
