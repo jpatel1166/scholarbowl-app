@@ -184,24 +184,52 @@ export default function DashboardClient() {
         <div>
           <h2 style={{ margin: 0 }}>Dashboard</h2>
 
-          {/* Practice streak */}
-          <div
-            style={{
-              marginTop: 10,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "8px 12px",
-              borderRadius: 999,
-              border: "1px solid #ddd",
-              background: "#fafafa",
-              fontWeight: 800,
-              color: "#111",
-            }}
-          >
-            <span style={{ fontSize: 18 }}>🔥</span>
-            <span>{practiceStreak} Day Practice Streak</span>
-          </div>
+ {/* Streak + (optional) warning on one line */}
+<div
+  style={{
+    marginTop: 10,
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap",
+  }}
+>
+  <div
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 8,
+      padding: "8px 12px",
+      borderRadius: 999,
+      border: "1px solid #ddd",
+      background: "#fafafa",
+      fontWeight: 800,
+      color: "#111",
+    }}
+  >
+    <span style={{ fontSize: 18 }}>🔥</span>
+    <span>{practiceStreak} Day Practice Streak</span>
+  </div>
+
+  {!practicedToday && (
+    <div
+      style={{
+        padding: "8px 12px",
+        borderRadius: 999,
+        background: "#fff3cd",
+        border: "1px solid #ffeeba",
+        fontWeight: 800,
+        color: "#856404",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+      }}
+    >
+      <span>⚠️</span>
+      <span>Complete a full round today to keep your streak alive.</span>
+    </div>
+  )}
+</div>
 
           {/* Badge Leaders + Team Weak (side-by-side) */}
           <div
@@ -249,22 +277,7 @@ export default function DashboardClient() {
                 </div>
               )}
 
-              {!practicedToday && (
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: "10px 14px",
-                    borderRadius: 10,
-                    background: "#fff3cd",
-                    border: "1px solid #ffeeba",
-                    fontWeight: 700,
-                    color: "#856404",
-                    display: "inline-block",
-                  }}
-                >
-                  ⚠️ Complete a full round today to keep your streak alive.
-                </div>
-              )}
+            
             </div>
 
             {/* RIGHT: Team Weak Categories (top 10) */}
