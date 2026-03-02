@@ -253,7 +253,7 @@ export default function DashboardClient() {
                     background: "#fafafa",
                   }}
                 >
-                  <div style={{ fontWeight: 800, marginBottom: 6 }}>🏆 Badge Leaders</div>
+                  <div style={{ fontWeight: 800, marginBottom: 6 }}>🏆 Top Badge Earners</div>
 
                   {leaderboard.map((p, i) => (
                     <div
@@ -299,13 +299,19 @@ export default function DashboardClient() {
                   {teamWeakTop10.map((c, idx) => (
                     <div
                       key={c.category_id}
-                      style={{
+                     style={{
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  padding: "4px 0",
-  borderTop: "1px solid #eee",
-  gap: 10,
+  padding: "6px 8px",
+  borderTop: idx === 0 ? "none" : "1px solid #eee",
+  borderRadius: 8,
+  background:
+    c.students_with_badge === 0
+      ? "#ffe5e5"         // urgent (none covered)
+      : c.students_with_badge <= Math.ceil(c.total_students / 3)
+      ? "#fff4cc"         // low coverage
+      : "transparent",
 }}
                     >
                      <div style={{ flex: 1, paddingRight: 10 }}>
