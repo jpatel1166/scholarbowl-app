@@ -307,12 +307,23 @@ export default function DashboardClient() {
                         borderTop: idx === 0 ? "none" : "1px solid #eee",
                       }}
                     >
-                      <div>
-                        <div style={{ fontWeight: 700 }}>{c.category_name}</div>
-                        <div style={{ fontSize: 12, color: "#666" }}>
-                          Coverage: {c.students_with_badge}/{c.total_students}
-                        </div>
-                      </div>
+                     <div style={{ flex: 1, paddingRight: 10 }}>
+  <div style={{ fontWeight: 700 }}>{c.category_name}</div>
+
+  <div style={{ fontSize: 12, color: "#666" }}>
+    Coverage: {c.students_with_badge}/{c.total_students}
+  </div>
+
+  <div style={{ marginTop: 6, height: 8, background: "#eee", borderRadius: 999, overflow: "hidden" }}>
+    <div
+      style={{
+        height: "100%",
+        width: `${Math.round((c.total_students ? c.students_with_badge / c.total_students : 0) * 100)}%`,
+        background: "#111",
+      }}
+    />
+  </div>
+</div>
 
                       <Link
                         href={`/round?category_id=${encodeURIComponent(c.category_id)}&n=20`}
