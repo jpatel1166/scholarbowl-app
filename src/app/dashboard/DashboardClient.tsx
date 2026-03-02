@@ -11,8 +11,6 @@ type TeamWeakRow = {
   total_students: number;
 };
 
-const [teamWeak, setTeamWeak] = useState<TeamWeakRow[]>([]);
-
 type Row = {
   category_id: string;
   category_name: string;
@@ -52,6 +50,7 @@ function sortArrow(active: boolean, dir: "asc" | "desc") {
   return dir === "asc" ? "↑" : "↓";
 }
 export default function DashboardClient() {
+  const [teamWeak, setTeamWeak] = useState<TeamWeakRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
