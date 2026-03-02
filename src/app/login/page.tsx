@@ -19,7 +19,7 @@ export default function Login() {
     setLoading(false);
 
     if (error) setMsg(error.message);
-    else router.push("/play");
+    else router.push("/dashboard");
   }
 
   return (
