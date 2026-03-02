@@ -301,7 +301,7 @@ export default function RoundPage() {
     if (isLastLineVisible) return;
 
     const lastIndex = tossup.prompt_lines.length - 1;
-    const delayMs = 4000;
+    const delayMs = 3000;
 
     const id = setTimeout(() => {
       setLineIndex((prev) => {
@@ -385,6 +385,8 @@ export default function RoundPage() {
     }
 
     setResult({ correct, correctAnswer: tossup.answer, points, isPower });
+    // Always reveal full question after submitting (right OR wrong)
+setLineIndex(tossup.prompt_lines.length - 1);
     // ✅ Update counters immediately so finalizeRound sees the right totals
 setScore((s) => s + points);
 
