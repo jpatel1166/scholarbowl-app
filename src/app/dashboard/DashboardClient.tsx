@@ -329,14 +329,14 @@ export default function DashboardClient() {
                       <Link
                         href={`/round?category_id=${encodeURIComponent(c.category_id)}&n=20`}
                         style={{
-  display: "inline-block",
-  padding: "5px 10px",
+   display: "inline-block",
+  padding: "6px 10px",
   borderRadius: 10,
-  border: "1px solid #ccc",
+  border: "1px solid #111",
   textDecoration: "none",
   fontWeight: 800,
-  color: "#111",
-  background: "white",
+  color: "white",
+  background: "#111",
   minWidth: 54,
   textAlign: "center",
 }}
