@@ -156,11 +156,18 @@ function ScholarleCard() {
     }
 
     const { data: tData, error: tErr } = await supabase.rpc("scholarle_today");
-    if (tErr || !tData || !tData[0]) {
-      setMsg(tErr?.message ?? "Could not load today’s Scholarle.");
-      setLoading(false);
-      return;
-    }
+
+if (tErr) {
+  setMsg(tErr.message);
+  setLoading(false);
+  return;
+}
+
+if (!tData || !tData[0]) {
+  setMsg("Scholarle is out of puzzles. Coach needs to add more 5-letter words to the bank.");
+  setLoading(false);
+  return;
+}
 
     const { data: gData, error: gErr } = await supabase.rpc("scholarle_my_guesses");
     if (gErr) console.error("Scholarle guesses error:", gErr.message);
