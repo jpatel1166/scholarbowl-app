@@ -61,7 +61,264 @@ function sortArrow(active: boolean, dir: "asc" | "desc") {
   if (!active) return "↕";
   return dir === "asc" ? "↑" : "↓";
 }
+type ScholarleToday = {
+  puzzle_date: string; // date as string from RPC
+  category_id: string;
+  category_name: string;
+  answer: string; // NOTE: client-visible
+};
 
+type ScholarleGuessRow = {
+  puzzle_date: string;
+  guess_num: number;
+  guess: string;
+};
+
+function isFiveLetters(s: string) {
+  return /^[A-Z]{5}$/.test(s);
+}
+
+// Wordle-style evaluation with duplicate-letter handling.
+// Returns an array of 5: "g" (green), "y" (yellow), "b" (gray).
+function evaluateWordle(guess: string, answer: string): ("g" | "y" | "b")[] {
+  const g = guess.toUpperCase();
+  const a = answer.toUpperCase();
+
+  const res: ("g" | "y" | "b")[] = Array(5).fill("b");
+
+  // Count letters in answer that are not already matched green
+  const remaining: Record<string, number> = {};
+
+  // First pass: greens
+  for (let i = 0; i < 5; i++) {
+    if (g[i] === a[i]) {
+      res[i] = "g";
+    } else {
+      remaining[a[i]] = (remaining[a[i]] ?? 0) + 1;
+    }
+  }
+
+  // Second pass: yellows
+  for (let i = 0; i < 5; i++) {
+    if (res[i] === "g") continue;
+    const ch = g[i];
+    if ((remaining[ch] ?? 0) > 0) {
+      res[i] = "y";
+      remaining[ch] -= 1;
+    }
+  }
+
+  return res;
+}
+
+function cellStyle(state: "g" | "y" | "b" | "e") {
+  // "e" = empty
+  const base: React.CSSProperties = {
+    width: 44,
+    height: 44,
+    border: "2px solid #d3d6da",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 800,
+    fontSize: 18,
+    lineHeight: 1,
+    userSelect: "none",
+  };
+
+  if (state === "e") return base;
+
+  if (state === "g") {
+    return { ...base, background: "#6aaa64", borderColor: "#6aaa64", color: "white" };
+  }
+  if (state === "y") {
+    return { ...base, background: "#c9b458", borderColor: "#c9b458", color: "white" };
+  }
+  return { ...base, background: "#787c7e", borderColor: "#787c7e", color: "white" }; // b
+}
+
+function ScholarleCard() {
+  const [loading, setLoading] = useState(true);
+  const [today, setToday] = useState<ScholarleToday | null>(null);
+  const [guesses, setGuesses] = useState<ScholarleGuessRow[]>([]);
+  const [guessInput, setGuessInput] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function loadScholarle() {
+    setLoading(true);
+    setMsg(null);
+
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      setMsg("Sign in to play Scholarle.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: tData, error: tErr } = await supabase.rpc("scholarle_today");
+    if (tErr || !tData || !tData[0]) {
+      setMsg(tErr?.message ?? "Could not load today’s Scholarle.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: gData, error: gErr } = await supabase.rpc("scholarle_my_guesses");
+    if (gErr) console.error("Scholarle guesses error:", gErr.message);
+
+    setToday(tData[0] as ScholarleToday);
+    setGuesses((gData ?? []) as ScholarleGuessRow[]);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    void loadScholarle();
+  }, []);
+
+  const maxedOut = guesses.length >= 6;
+  const solved = !!today && guesses.some((g) => g.guess.toUpperCase() === today.answer.toUpperCase());
+
+  async function submitGuess() {
+    if (!today) return;
+
+    const raw = guessInput.trim().toUpperCase();
+    if (!isFiveLetters(raw)) {
+      setMsg("Enter a 5-letter word (A–Z).");
+      return;
+    }
+
+    if (solved) {
+      setMsg("Already solved today’s Scholarle.");
+      return;
+    }
+
+    if (maxedOut) {
+      setMsg("No guesses left today.");
+      return;
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      setMsg("Not signed in.");
+      return;
+    }
+
+    const guessNum = guesses.length + 1;
+
+    const { error: insErr } = await supabase.from("scholarle_attempts").insert({
+      user_id: userData.user.id,
+      puzzle_date: today.puzzle_date,
+      guess_num: guessNum,
+      guess: raw,
+    });
+
+    if (insErr) {
+      setMsg(insErr.message);
+      return;
+    }
+
+    setGuessInput("");
+    setMsg(null);
+    await loadScholarle();
+  }
+
+  // Build 6 rows of guesses (or empty)
+  const grid = useMemo(() => {
+    const rows: { letters: string[]; colors: ("g" | "y" | "b" | "e")[] }[] = [];
+    for (let r = 0; r < 6; r++) {
+      const g = guesses[r]?.guess?.toUpperCase() ?? "";
+      const letters = g.padEnd(5, " ").slice(0, 5).split("");
+      let colors: ("g" | "y" | "b" | "e")[] = Array(5).fill("e");
+      if (today && isFiveLetters(g)) {
+        colors = evaluateWordle(g, today.answer).map((c) => c) as any;
+      }
+      rows.push({
+        letters,
+        colors,
+      });
+    }
+    return rows;
+  }, [guesses, today]);
+
+  return (
+    <div style={{ marginTop: 14, border: "1px solid #ddd", borderRadius: 12, padding: 14, background: "white" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontWeight: 900, fontSize: 16 }}>🧩 Scholarle</div>
+          <div style={{ marginTop: 4, fontSize: 12, color: "#666" }}>
+            Category: <b>{today ? today.category_name : "…"}</b>
+          </div>
+        </div>
+        <div style={{ fontSize: 12, color: "#666" }}>
+          {solved ? "Solved" : maxedOut ? "Out of guesses" : `${6 - guesses.length} guesses left`}
+        </div>
+      </div>
+
+      {loading ? (
+        <p style={{ marginTop: 12, color: "#555" }}>Loading…</p>
+      ) : (
+        <>
+          <div style={{ marginTop: 12, display: "grid", gap: 6, justifyContent: "start" }}>
+            {grid.map((row, rIdx) => (
+              <div key={rIdx} style={{ display: "grid", gridTemplateColumns: "repeat(5, 44px)", gap: 6 }}>
+                {row.letters.map((ch, cIdx) => (
+                  <div key={cIdx} style={cellStyle(row.colors[cIdx])}>
+                    {ch === " " ? "" : ch}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              value={guessInput}
+              onChange={(e) => setGuessInput(e.target.value.toUpperCase())}
+              maxLength={5}
+              placeholder="GUESS"
+              disabled={solved || maxedOut}
+              style={{
+                width: 120,
+                padding: "10px 12px",
+                borderRadius: 8,
+                border: "1px solid #ccc",
+                fontWeight: 800,
+                letterSpacing: 2,
+                textTransform: "uppercase",
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void submitGuess();
+              }}
+            />
+            <button
+              onClick={() => void submitGuess()}
+              disabled={solved || maxedOut}
+              style={{
+                padding: "10px 14px",
+                borderRadius: 8,
+                border: "1px solid #ccc",
+                background: "#111",
+                color: "white",
+                fontWeight: 800,
+                opacity: solved || maxedOut ? 0.6 : 1,
+                cursor: solved || maxedOut ? "not-allowed" : "pointer",
+              }}
+            >
+              Submit
+            </button>
+            {msg && <span style={{ fontSize: 12, color: "#b00020", fontWeight: 700 }}>{msg}</span>}
+          </div>
+
+          {/* Optional: reveal answer after 6 guesses */}
+          {today && maxedOut && !solved && (
+            <div style={{ marginTop: 10, fontSize: 12, color: "#666" }}>
+              Answer: <b>{today.answer}</b>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 export default function DashboardClient() {
   const [teamWeak, setTeamWeak] = useState<TeamWeakRow[]>([]);
   const [weekActivity, setWeekActivity] = useState<WeekActivityRow | null>(null);
@@ -372,10 +629,13 @@ if (!cancelled) {
               </div>
 
               <div style={{ fontSize: 12, color: "#777", marginTop: 6 }}>
-                Streak leaders can span beyond the current week.
-              </div>
-            </div>
-          </div>
+  Streak leaders can span beyond the current week.
+</div>
+
+<ScholarleCard />
+
+</div>
+</div>
         </div>
 
         {/* RIGHT COLUMN: team weak categories */}
