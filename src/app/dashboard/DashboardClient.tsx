@@ -390,7 +390,7 @@ if (!cancelled) {
           >
             <div style={{ fontWeight: 800, marginBottom: 6 }}>🧠 Team Weak Categories</div>
             <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
-              Based on how many students have earned at least one badge in each category.
+              Based on how many students have earned at least one badge in each category. This will become more accurate the more the team plays.
             </div>
 
             {teamWeak.map((c) => (
