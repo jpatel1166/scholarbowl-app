@@ -511,7 +511,9 @@ if (!cancelled) {
   }, [rows, sortKey, sortDir]);
 
   const weekLabel =
-    weekActivity ? `${weekActivity.week_start}–${weekActivity.week_end}` : "";
+  weekActivity
+    ? `${new Date(weekActivity.week_start).toLocaleDateString("en-US", { month: "long", day: "numeric" })} – ${new Date(weekActivity.week_end).toLocaleDateString("en-US", { month: "long", day: "numeric" })}`
+    : "";
 
   const streakLeaderLabel =
     streakLeaders.length > 0
