@@ -537,8 +537,9 @@ if (!cancelled) {
 >
  
   <Link href="/play">Play</Link>
-  <Link href="/stats">Stats</Link>
   <Link href="/account">Account</Link>
+  <Link href="/stats">Stats</Link>
+  
 </div>
       {/* Top row: streak pill + warning */}
       <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
