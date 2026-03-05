@@ -525,7 +525,20 @@ if (!cancelled) {
       <div style={{ display: "flex", justifyContent: "center" }}>
         <h2 style={{ margin: 0 }}>Dashboard</h2>
       </div>
-
+<div
+  style={{
+    display: "flex",
+    gap: 14,
+    marginBottom: 20,
+    alignItems: "center",
+    fontWeight: 600
+  }}
+>
+  <Link href="/dashboard">Dashboard</Link>
+  <Link href="/play">Play</Link>
+  <Link href="/stats">Stats</Link>
+  <Link href="/account">Account</Link>
+</div>
       {/* Top row: streak pill + warning */}
       <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
         <div
