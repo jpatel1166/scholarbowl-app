@@ -4,12 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
-type TeamWeakRow = {
-  category_id: string;
-  category_name: string;
-  students_with_badge: number;
-  total_students: number;
-};
 
 type WeekActivityRow = {
   week_start: string; // e.g. "Mar 3"
@@ -143,6 +137,7 @@ function ScholarleCard() {
   const [guesses, setGuesses] = useState<ScholarleGuessRow[]>([]);
   const [guessInput, setGuessInput] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  
 
   async function loadScholarle() {
     setLoading(true);
@@ -327,7 +322,7 @@ if (!tData || !tData[0]) {
   );
 }
 export default function DashboardClient() {
-  const [teamWeak, setTeamWeak] = useState<TeamWeakRow[]>([]);
+ 
   const [weekActivity, setWeekActivity] = useState<WeekActivityRow | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -339,6 +334,7 @@ export default function DashboardClient() {
 
   const [practicedToday, setPracticedToday] = useState(true);
   const [leaderboard, setLeaderboard] = useState<{ name: string; total_badges: number }[]>([]);
+  const [diamondCoverage, setDiamondCoverage] = useState<{ category: string; diamond_students: string }[]>([]);
 
   // Practice streak (for THIS logged-in student)
   const [practiceStreak, setPracticeStreak] = useState<number>(0);
@@ -353,6 +349,7 @@ export default function DashboardClient() {
       setLoading(true);
       setError(null);
 
+
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
         if (!cancelled) {
@@ -361,6 +358,14 @@ export default function DashboardClient() {
         }
         return;
       }
+
+
+      const { data: diamondData, error: diamondErr } = await supabase.rpc("diamond_category_coverage");
+
+if (!cancelled) {
+  if (diamondErr) console.error("Diamond coverage error:", diamondErr.message);
+  setDiamondCoverage((diamondData ?? []) as { category: string; diamond_students: string }[]);
+}
 
       // ----- Central-time "today" string -----
       const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
@@ -378,10 +383,7 @@ export default function DashboardClient() {
       setPracticeStreak(profile?.practice_streak ?? 0);
       setPracticedToday(lastDay === today);
 
-      // ----- Team weak categories (TOP 10 should be handled inside your SQL, but we just render what we get) -----
-      const { data: weakData, error: weakErr } = await supabase.rpc("team_weak_categories");
-      if (weakErr) console.error("Team weak categories error:", weakErr.message);
-      if (!cancelled) setTeamWeak((weakData ?? []) as TeamWeakRow[]);
+     
 
       // ----- Badge leaderboard (top 3) -----
       const { data: lbData, error: lbErr } = await supabase.rpc("badge_leaderboard");
@@ -655,71 +657,49 @@ if (!cancelled) {
 </div>
         </div>
 
-        {/* RIGHT COLUMN: team weak categories */}
-        {teamWeak.length > 0 && (
-          <div
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: 12,
-              padding: 12,
-              background: "#fafafa",
-            }}
-          >
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>🧠 Team Weak Categories</div>
-            <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
-              Based on how many students have earned at least one badge in each category. This will become more accurate the more the team plays.
-            </div>
+        {/* RIGHT COLUMN: team specialists */}
+       <div
+  style={{
+    border: "1px solid #ddd",
+    borderRadius: 12,
+    padding: 12,
+    background: "#fafafa",
+  }}
+>
+  <div style={{ fontWeight: 800, marginBottom: 6 }}>💎 Team Specialists</div>
+  <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+    Categories with students who have earned a Perfect badge.
+  </div>
 
-            {teamWeak.map((c) => (
-              <div
-                key={c.category_id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "8px 0",
-                  borderTop: "1px solid #eee",
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 800 }}>{c.category_name}</div>
-                  <div style={{ fontSize: 12, color: "#666" }}>
-                    Coverage: {c.students_with_badge}/{c.total_students}
-                  </div>
-
-                  {/* little progress bar for readability */}
-                  <div style={{ marginTop: 6, height: 6, background: "#e9e9e9", borderRadius: 999, overflow: "hidden", maxWidth: 260 }}>
-                    <div
-                      style={{
-                        height: "100%",
-                        width: `${c.total_students ? Math.round((c.students_with_badge / c.total_students) * 100) : 0}%`,
-                        background: "#111",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <Link
-                  href={`/round?category_id=${encodeURIComponent(c.category_id)}&n=20`}
-                  style={{
-                    display: "inline-block",
-                    padding: "8px 14px",
-                    borderRadius: 12,
-                    textDecoration: "none",
-                    fontWeight: 900,
-                    color: "white",
-                    background: "#111",
-                    minWidth: 64,
-                    textAlign: "center",
-                  }}
-                >
-                  Go
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 8,
+    }}
+  >
+    {diamondCoverage.map((row) => (
+      <div
+        key={row.category}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 10,
+          padding: "6px 0",
+          borderBottom: "1px solid #eee",
+          alignItems: "flex-start",
+        }}
+      >
+        <div style={{ fontWeight: 700 }}>{row.category}</div>
+        <div style={{ color: "#555", textAlign: "right", fontSize: 14 }}>
+          {row.diamond_students}
+        </div>
       </div>
+    ))}
+  </div>
+</div>
+</div>
+                
 
       {/* Badge counts */}
       <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
