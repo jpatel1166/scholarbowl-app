@@ -659,12 +659,14 @@ if (!cancelled) {
 
         {/* RIGHT COLUMN: team specialists */}
        <div
-  style={{
-    border: "1px solid #ddd",
-    borderRadius: 12,
-    padding: 12,
-    background: "#fafafa",
-  }}
+style={{
+  border: "1px solid #ddd",
+  borderRadius: 12,
+  padding: 12,
+  background: "#fafafa",
+  maxHeight: 480,
+  overflowY: "auto",
+}}
 >
   <div style={{ fontWeight: 800, marginBottom: 6 }}>💎 Team Specialists</div>
   <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
