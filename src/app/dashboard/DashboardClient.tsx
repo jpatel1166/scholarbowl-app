@@ -465,14 +465,7 @@ if (!cancelled) {
     };
   }, []);
 
-  const weakest = useMemo(() => {
-    if (!rows.length) return null;
-    let w = rows[0];
-    for (const r of rows) {
-      if (r.best_correct < w.best_correct) w = r;
-    }
-    return w;
-  }, [rows]);
+ 
 
   const badgeCounts = useMemo(() => {
     const counts = { Perfect: 0, Gold: 0, Silver: 0, Bronze: 0, Unranked: 0 };
@@ -749,37 +742,7 @@ if (!cancelled) {
 
       {/* Practice weakest CTA */}
       <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
-        {weakest ? (
-          <Link
-            href={`/round?category_id=${encodeURIComponent(weakest.category_id)}&n=20`}
-            style={{
-              display: "inline-block",
-              padding: "10px 14px",
-              borderRadius: 12,
-              background: "#111",
-              color: "white",
-              textDecoration: "none",
-              fontWeight: 900,
-            }}
-          >
-            Practice Weakest: {weakest.category_name} ({weakest.best_correct}/20)
-          </Link>
-        ) : (
-          <Link
-            href={`/round?n=20`}
-            style={{
-              display: "inline-block",
-              padding: "10px 14px",
-              borderRadius: 12,
-              background: "#111",
-              color: "white",
-              textDecoration: "none",
-              fontWeight: 900,
-            }}
-          >
-            Start a Round
-          </Link>
-        )}
+        
       </div>
 
       {loading && <p style={{ marginTop: 14, color: "#555" }}>Loading…</p>}
