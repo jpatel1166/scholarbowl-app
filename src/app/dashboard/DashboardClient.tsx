@@ -575,7 +575,7 @@ if (!cancelled) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: "1fr 1fr 1fr",
           gap: 14,
           alignItems: "start",
           marginTop: 14,
