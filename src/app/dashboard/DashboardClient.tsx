@@ -337,7 +337,9 @@ export default function DashboardClient() {
  const [diamondCoverage, setDiamondCoverage] = useState<
   { category_id: string; category: string; diamond_students: string }[]
 >([]);
-
+const [assignedCategories, setAssignedCategories] = useState<
+  { category_id: string; category_name: string }[]
+>([]);
   // Practice streak (for THIS logged-in student)
   const [practiceStreak, setPracticeStreak] = useState<number>(0);
 
@@ -360,7 +362,27 @@ export default function DashboardClient() {
         }
         return;
       }
+const { data: assignedData, error: assignedErr } = await supabase
+  .from("student_category_assignments")
+  .select(`
+    category_id,
+    categories (
+      name
+    )
+  `)
+  .eq("user_id", userData.user.id);
 
+if (!cancelled) {
+  if (assignedErr) console.error("Assigned categories error:", assignedErr.message);
+
+  const mappedAssigned =
+    (assignedData ?? []).map((row: any) => ({
+      category_id: row.category_id,
+      category_name: row.categories?.name ?? "Unknown Category",
+    })) ?? [];
+
+  setAssignedCategories(mappedAssigned);
+}
 
       const { data: diamondData, error: diamondErr } = await supabase.rpc("diamond_category_coverage");
 
@@ -730,6 +752,62 @@ if (!cancelled) {
     ))}
   </div>
 </div>
+
+<div
+  style={{
+    marginTop: 14,
+    border: "1px solid #ddd",
+    borderRadius: 12,
+    padding: 12,
+    background: "#fafafa",
+  }}
+>
+  <div style={{ fontWeight: 800, marginBottom: 6 }}>📌 My Assigned Categories</div>
+  <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+    These are the categories you are responsible for practicing.
+  </div>
+
+  {assignedCategories.length === 0 ? (
+    <div style={{ color: "#666", fontSize: 14 }}>No assigned categories yet.</div>
+  ) : (
+    <div style={{ display: "grid", gap: 8 }}>
+      {assignedCategories.map((row) => (
+        <div
+          key={row.category_id}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto",
+            gap: 10,
+            alignItems: "center",
+            padding: "6px 0",
+            borderBottom: "1px solid #eee",
+          }}
+        >
+          <div style={{ fontWeight: 700 }}>{row.category_name}</div>
+
+          <Link
+            href={`/round?category_id=${encodeURIComponent(row.category_id)}&n=20`}
+            style={{
+              display: "inline-block",
+              padding: "4px 8px",
+              borderRadius: 10,
+              border: "1px solid #ccc",
+              textDecoration: "none",
+              fontWeight: 800,
+              color: "#111",
+              background: "white",
+              minWidth: 42,
+              textAlign: "center",
+            }}
+          >
+            Go
+          </Link>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
 </div>
                 
 
