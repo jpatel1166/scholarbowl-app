@@ -752,8 +752,8 @@ if (!cancelled) {
     ))}
   </div>
 </div>
-
-<div
+</div>
+      <div
   style={{
     marginTop: 14,
     border: "1px solid #ddd",
@@ -806,10 +806,7 @@ if (!cancelled) {
       ))}
     </div>
   )}
-</div>
-
-</div>
-                
+</div>          
 
       {/* Badge counts */}
       <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
