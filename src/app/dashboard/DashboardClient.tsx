@@ -362,6 +362,16 @@ const [assignedCategories, setAssignedCategories] = useState<
         }
         return;
       }
+    
+const { data: diamondData, error: diamondErr } = await supabase.rpc("diamond_category_coverage");
+
+if (!cancelled) {
+  if (diamondErr) console.error("Diamond coverage error:", diamondErr.message);
+  setDiamondCoverage(
+    (diamondData ?? []) as { category_id: string; category: string; diamond_students: string }[]
+  );
+}
+
 const { data: assignedData, error: assignedErr } = await supabase
   .from("student_category_assignments")
   .select(`
