@@ -338,7 +338,7 @@ export default function DashboardClient() {
   { category_id: string; category: string; diamond_students: string }[]
 >([]);
 const [assignedCategories, setAssignedCategories] = useState<
-  { category_id: string; category_name: string }[]
+  { category_id: string; category_name: string; badge_emoji: string }[]
 >([]);
   // Practice streak (for THIS logged-in student)
   const [practiceStreak, setPracticeStreak] = useState<number>(0);
@@ -372,25 +372,50 @@ const { data: assignedData, error: assignedErr } = await supabase
   `)
   .eq("user_id", userData.user.id);
 
+const { data: badgeData, error: badgeErr } = await supabase
+  .from("badge_unlocks")
+  .select("category_id,tier")
+  .eq("user_id", userData.user.id);
+
 if (!cancelled) {
   if (assignedErr) console.error("Assigned categories error:", assignedErr.message);
+  if (badgeErr) console.error("Assigned category badges error:", badgeErr.message);
+
+  const badgeRank: Record<string, number> = {
+    bronze: 1,
+    silver: 2,
+    gold: 3,
+    perfect: 4,
+  };
+
+  const badgeEmojiFromRank: Record<number, string> = {
+    0: "⬜",
+    1: "🥉",
+    2: "🥈",
+    3: "🥇",
+    4: "💎",
+  };
+
+  const bestBadgeByCategory = new Map<string, number>();
+
+  for (const row of badgeData ?? []) {
+    const categoryId = row.category_id as string;
+    const rank = badgeRank[(row.tier as string) ?? ""] ?? 0;
+    const current = bestBadgeByCategory.get(categoryId) ?? 0;
+    if (rank > current) bestBadgeByCategory.set(categoryId, rank);
+  }
 
   const mappedAssigned =
-    (assignedData ?? []).map((row: any) => ({
-      category_id: row.category_id,
-      category_name: row.categories?.name ?? "Unknown Category",
-    })) ?? [];
+    (assignedData ?? []).map((row: any) => {
+      const rank = bestBadgeByCategory.get(row.category_id) ?? 0;
+      return {
+        category_id: row.category_id,
+        category_name: row.categories?.name ?? "Unknown Category",
+        badge_emoji: badgeEmojiFromRank[rank] ?? "⬜",
+      };
+    }) ?? [];
 
   setAssignedCategories(mappedAssigned);
-}
-
-      const { data: diamondData, error: diamondErr } = await supabase.rpc("diamond_category_coverage");
-
-if (!cancelled) {
-  if (diamondErr) console.error("Diamond coverage error:", diamondErr.message);
-  setDiamondCoverage(
-  (diamondData ?? []) as { category_id: string; category: string; diamond_students: string }[]
-);
 }
 
       // ----- Central-time "today" string -----
@@ -799,7 +824,9 @@ if (!cancelled) {
                 borderBottom: "1px solid #eee",
               }}
             >
-              <div style={{ fontWeight: 700 }}>{row.category_name}</div>
+              <div style={{ fontWeight: 700 }}>
+  {row.badge_emoji} {row.category_name}
+</div>
 
               <Link
                 href={`/round?category_id=${encodeURIComponent(row.category_id)}&n=20`}
