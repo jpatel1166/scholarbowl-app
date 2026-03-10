@@ -334,7 +334,9 @@ export default function DashboardClient() {
 
   const [practicedToday, setPracticedToday] = useState(true);
   const [leaderboard, setLeaderboard] = useState<{ name: string; total_badges: number }[]>([]);
-  const [diamondCoverage, setDiamondCoverage] = useState<{ category: string; diamond_students: string }[]>([]);
+ const [diamondCoverage, setDiamondCoverage] = useState<
+  { category_id: string; category: string; diamond_students: string }[]
+>([]);
 
   // Practice streak (for THIS logged-in student)
   const [practiceStreak, setPracticeStreak] = useState<number>(0);
@@ -364,7 +366,9 @@ export default function DashboardClient() {
 
 if (!cancelled) {
   if (diamondErr) console.error("Diamond coverage error:", diamondErr.message);
-  setDiamondCoverage((diamondData ?? []) as { category: string; diamond_students: string }[]);
+  setDiamondCoverage(
+  (diamondData ?? []) as { category_id: string; category: string; diamond_students: string }[]
+);
 }
 
       // ----- Central-time "today" string -----
@@ -575,7 +579,7 @@ if (!cancelled) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: "0.9fr 1.35fr",
           gap: 14,
           alignItems: "start",
           marginTop: 14,
@@ -658,15 +662,15 @@ if (!cancelled) {
         </div>
 
         {/* RIGHT COLUMN: team specialists */}
-       <div
-style={{
-  border: "1px solid #ddd",
-  borderRadius: 12,
-  padding: 12,
-  background: "#fafafa",
-  maxHeight: 480,
-  overflowY: "auto",
-}}
+<div
+  style={{
+    border: "1px solid #ddd",
+    borderRadius: 12,
+    padding: 12,
+    background: "#fafafa",
+    maxHeight: 520,
+    overflowY: "auto",
+  }}
 >
   <div style={{ fontWeight: 800, marginBottom: 6 }}>💎 Team Specialists</div>
   <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
@@ -677,25 +681,51 @@ style={{
     style={{
       display: "grid",
       gridTemplateColumns: "1fr 1fr",
-      gap: 8,
+      gap: 10,
     }}
   >
     {diamondCoverage.map((row) => (
       <div
-        key={row.category}
+        key={row.category_id}
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 10,
+          display: "grid",
+          gridTemplateColumns: "1.5fr 1fr auto",
+          gap: 8,
           padding: "6px 0",
           borderBottom: "1px solid #eee",
-          alignItems: "flex-start",
+          alignItems: "center",
         }}
       >
-        <div style={{ fontWeight: 700 }}>{row.category}</div>
-        <div style={{ color: "#555", textAlign: "right", fontSize: 14 }}>
+        <div style={{ fontWeight: 700, lineHeight: 1.15 }}>{row.category}</div>
+
+        <div
+          style={{
+            color: "#555",
+            fontSize: 14,
+            textAlign: "right",
+            lineHeight: 1.15,
+          }}
+        >
           {row.diamond_students}
         </div>
+
+        <Link
+          href={`/round?category_id=${encodeURIComponent(row.category_id)}&n=20`}
+          style={{
+            display: "inline-block",
+            padding: "4px 8px",
+            borderRadius: 10,
+            border: "1px solid #ccc",
+            textDecoration: "none",
+            fontWeight: 800,
+            color: "#111",
+            background: "white",
+            minWidth: 42,
+            textAlign: "center",
+          }}
+        >
+          Go
+        </Link>
       </div>
     ))}
   </div>
