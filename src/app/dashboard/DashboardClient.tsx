@@ -683,107 +683,55 @@ if (!cancelled) {
 </div>
         </div>
 
-        {/* RIGHT COLUMN: team specialists */}
-<div
-  style={{
-    border: "1px solid #ddd",
-    borderRadius: 12,
-    padding: 12,
-    background: "#fafafa",
-    maxHeight: 520,
-    overflowY: "auto",
-  }}
->
-  <div style={{ fontWeight: 800, marginBottom: 6 }}>💎 Team Specialists</div>
-  <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
-    Categories with students who have earned a Perfect badge.
-  </div>
-
+ {/* RIGHT COLUMN */}
+<div>
+  {/* Team Specialists */}
   <div
     style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: 10,
+      border: "1px solid #ddd",
+      borderRadius: 12,
+      padding: 12,
+      background: "#fafafa",
+      maxHeight: 520,
+      overflowY: "auto",
     }}
   >
-    {diamondCoverage.map((row) => (
-      <div
-        key={row.category_id}
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.5fr 1fr auto",
-          gap: 8,
-          padding: "6px 0",
-          borderBottom: "1px solid #eee",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ fontWeight: 700, lineHeight: 1.15 }}>{row.category}</div>
+    <div style={{ fontWeight: 800, marginBottom: 6 }}>💎 Team Specialists</div>
+    <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+      Categories with students who have earned a Perfect badge.
+    </div>
 
-        <div
-          style={{
-            color: "#555",
-            fontSize: 14,
-            textAlign: "right",
-            lineHeight: 1.15,
-          }}
-        >
-          {row.diamond_students}
-        </div>
-
-        <Link
-          href={`/round?category_id=${encodeURIComponent(row.category_id)}&n=20`}
-          style={{
-            display: "inline-block",
-            padding: "4px 8px",
-            borderRadius: 10,
-            border: "1px solid #ccc",
-            textDecoration: "none",
-            fontWeight: 800,
-            color: "#111",
-            background: "white",
-            minWidth: 42,
-            textAlign: "center",
-          }}
-        >
-          Go
-        </Link>
-      </div>
-    ))}
-  </div>
-</div>
-</div>
-      <div
-  style={{
-    marginTop: 14,
-    border: "1px solid #ddd",
-    borderRadius: 12,
-    padding: 12,
-    background: "#fafafa",
-  }}
->
-  <div style={{ fontWeight: 800, marginBottom: 6 }}>📌 My Assigned Categories</div>
-  <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
-    These are the categories you are responsible for practicing.
-  </div>
-
-  {assignedCategories.length === 0 ? (
-    <div style={{ color: "#666", fontSize: 14 }}>No assigned categories yet.</div>
-  ) : (
-    <div style={{ display: "grid", gap: 8 }}>
-      {assignedCategories.map((row) => (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 10,
+      }}
+    >
+      {diamondCoverage.map((row) => (
         <div
           key={row.category_id}
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr auto",
-            gap: 10,
-            alignItems: "center",
+            gridTemplateColumns: "1.5fr 1fr auto",
+            gap: 8,
             padding: "6px 0",
             borderBottom: "1px solid #eee",
+            alignItems: "center",
           }}
         >
-          <div style={{ fontWeight: 700 }}>{row.category_name}</div>
+          <div style={{ fontWeight: 700, lineHeight: 1.15 }}>{row.category}</div>
+
+          <div
+            style={{
+              color: "#555",
+              fontSize: 14,
+              textAlign: "right",
+              lineHeight: 1.15,
+            }}
+          >
+            {row.diamond_students}
+          </div>
 
           <Link
             href={`/round?category_id=${encodeURIComponent(row.category_id)}&n=20`}
@@ -805,10 +753,69 @@ if (!cancelled) {
         </div>
       ))}
     </div>
-  )}
-</div>          
+  </div>
 
-      {/* Badge counts */}
+  {/* My Assigned Categories */}
+  <div
+    style={{
+      marginTop: 14,
+      border: "1px solid #ddd",
+      borderRadius: 12,
+      padding: 12,
+      background: "#fafafa",
+      maxHeight: 360,
+      overflowY: "auto",
+    }}
+  >
+    <div style={{ fontWeight: 800, marginBottom: 6 }}>📌 My Assigned Categories</div>
+    <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+      These are the categories you are responsible for practicing.
+    </div>
+
+    {assignedCategories.length === 0 ? (
+      <div style={{ color: "#666", fontSize: 14 }}>No assigned categories yet.</div>
+    ) : (
+      <div style={{ display: "grid", gap: 8 }}>
+        {assignedCategories.map((row) => (
+          <div
+            key={row.category_id}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              gap: 10,
+              alignItems: "center",
+              padding: "6px 0",
+              borderBottom: "1px solid #eee",
+            }}
+          >
+            <div style={{ fontWeight: 700 }}>{row.category_name}</div>
+
+            <Link
+              href={`/round?category_id=${encodeURIComponent(row.category_id)}&n=20`}
+              style={{
+                display: "inline-block",
+                padding: "4px 8px",
+                borderRadius: 10,
+                border: "1px solid #ccc",
+                textDecoration: "none",
+                fontWeight: 800,
+                color: "#111",
+                background: "white",
+                minWidth: 42,
+                textAlign: "center",
+              }}
+            >
+              Go
+            </Link>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</div>
+</div>
+
+{/* Badge counts */}
       <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
         <div style={{ border: "1px solid #ddd", borderRadius: 999, padding: "6px 10px", background: "#fafafa" }}>
           💎 Perfect: <b>{badgeCounts.Perfect}</b>
