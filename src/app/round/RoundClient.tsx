@@ -56,6 +56,7 @@ type Tossup = {
   acceptable_answers: string[] | null;
   prompt_lines: string[];
   explanation: string | null;
+  image_url: string | null;
 };
 
 type SetRow = { id: string; title: string };
@@ -291,7 +292,7 @@ export default function RoundPage() {
 
     const { data, error } = await supabase
       .from("tossups")
-      .select("id,set_id,category_id,answer,acceptable_answers,prompt_lines,explanation,categories(name)")
+      .select("id,set_id,category_id,answer,acceptable_answers,prompt_lines,explanation,image_url,categories(name)")
       .eq("id", nextId)
       .single();
 
@@ -843,15 +844,39 @@ const finalCorrect = correctCountRef.current;
       {/* Tossup UI */}
       {roundActive && !tossup ? <p style={{ marginTop: 14 }}>No tossups found for this set/filter.</p> : null}
 
-      {roundActive && tossup && (
-        <>
-          <div style={{ border: "1px solid #ddd", borderRadius: 10, padding: 14, lineHeight: 1.5, marginTop: 14 }}>
-            {visibleLines.map((ln, i) => (
-              <p key={i} style={{ margin: "8px 0" }}>
-                {ln}
-              </p>
-            ))}
-          </div>
+     {roundActive && tossup && (
+  <>
+    {tossup.image_url && (
+      <div
+        style={{
+          marginTop: 14,
+          border: "1px solid #ddd",
+          borderRadius: 10,
+          padding: 14,
+          background: "#fafafa",
+        }}
+      >
+        <img
+          src={tossup.image_url}
+          alt="Artwork identification prompt"
+          style={{
+            maxWidth: "100%",
+            maxHeight: 500,
+            display: "block",
+            margin: "0 auto",
+            borderRadius: 8,
+          }}
+        />
+      </div>
+    )}
+
+    <div style={{ border: "1px solid #ddd", borderRadius: 10, padding: 14, lineHeight: 1.5, marginTop: 14 }}>
+      {visibleLines.map((ln, i) => (
+        <p key={i} style={{ margin: "8px 0" }}>
+          {ln}
+        </p>
+      ))}
+    </div>
 
           {secondsLeft !== null && !result && !buzzed && !lockedOut && (
             <div style={{ marginTop: 10 }}>
