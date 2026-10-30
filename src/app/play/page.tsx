@@ -51,6 +51,9 @@ export default function Play() {
   const [sets, setSets] = useState<SetRow[]>([]);
   const [setId, setSetId] = useState<string>("");
 
+  const [loadingQuestion, setLoadingQuestion] = useState(false);
+  const [questionError, setQuestionError] = useState<string | null>(null);
+  const questionRequest = useRef(0);
   const [tossup, setTossup] = useState<Tossup | null>(null);
   const [lineIndex, setLineIndex] = useState(0);
   const [buzzed, setBuzzed] = useState(false);
@@ -209,8 +212,24 @@ const [scorePop, setScorePop] = useState<number | null>(null);
     return () => clearTimeout(id);
   }, [questionTimerOn, qSecondsLeft, result, buzzed, lockedOut, tossup]);
 
+  function resetPractice() {
+    questionRequest.current += 1;
+    setTossup(null);
+    setResult(null);
+    setBuzzed(false);
+    setLockedOut(false);
+    setSecondsLeft(null);
+    setQSecondsLeft(null);
+    setLoadingQuestion(false);
+    setQuestionError(null);
+  }
+
   async function loadNext() {
-    if (!setId) return;
+    if (!setId || !userId || loadingQuestion) return;
+    const requestId = ++questionRequest.current;
+    setLoadingQuestion(true);
+    setQuestionError(null);
+    setTossup(null);
 
     setResult(null);
     setAnswer("");
@@ -221,8 +240,8 @@ const [scorePop, setScorePop] = useState<number | null>(null);
     setLockedOut(false);
     setSecondsLeft(null);
 
-    // Start question timer fresh (new)
-    setQSecondsLeft(questionTimerOn ? QUESTION_SECONDS : null);
+    // Keep timers stopped while the question is loading.
+    setQSecondsLeft(null);
 
     let catIds: string[] | null = null;
 
@@ -240,21 +259,33 @@ const [scorePop, setScorePop] = useState<number | null>(null);
 
     if (catIds) q = q.in("category_id", catIds);
 
-    const { data, error } = await q;
+    let response;
+    try {
+      response = await q;
+    } catch {
+      if (requestId === questionRequest.current) {
+        setLoadingQuestion(false);
+        setQuestionError("Could not load a question. Please try again.");
+      }
+      return;
+    }
+    const { data, error } = response;
 
+    if (requestId !== questionRequest.current) return;
+    setLoadingQuestion(false);
     if (error || !data || data.length === 0) {
+      setQuestionError(error ? "Could not load a question. Please try again." : "No questions match these settings. Choose another category or set.");
       setTossup(null);
       return;
     }
 
     const pick = data[Math.floor(Math.random() * data.length)] as any as Tossup;
     setTossup(pick);
+    setStartMs(Date.now());
+    setQSecondsLeft(questionTimerOn ? QUESTION_SECONDS : null);
   }
 
-  useEffect(() => {
-    if (setId) loadNext();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setId]);
+
 
   const visibleLines = useMemo(() => {
     if (!tossup) return [];
@@ -396,7 +427,7 @@ if (correct) {
     function isTypingTarget(el: any) {
       if (!el) return false;
       const tag = (el.tagName || "").toLowerCase();
-      return tag === "input" || tag === "textarea" || el.isContentEditable;
+      return ["input", "textarea", "select", "button", "a"].includes(tag) || el.isContentEditable;
     }
 
     function onKeyDown(e: KeyboardEvent) {
@@ -421,7 +452,7 @@ if (correct) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buzzed, result, lockedOut, tossup, setId]);
+  }, [buzzed, result, lockedOut, tossup, setId, loadingQuestion, userId, categoryFilter, useWeakestMode, weakestCategoryIds, questionTimerOn]);
 
   return (
     <main style={{ maxWidth: 980, margin: "30px auto", padding: 16, fontFamily: "system-ui" }}>
@@ -465,7 +496,7 @@ if (correct) {
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "14px 0", flexWrap: "wrap" }}>
         <label>Question Set:</label>
-        <select value={setId} onChange={(e) => setSetId(e.target.value)} style={{ padding: 8 }}>
+        <select value={setId} onChange={(e) => { resetPractice(); setSetId(e.target.value); }} style={{ padding: 8 }}>
           {sets.map((s) => (
             <option key={s.id} value={s.id}>
               {s.title}
@@ -473,8 +504,8 @@ if (correct) {
           ))}
         </select>
 
-        <button onClick={loadNext} style={{ padding: "8px 12px" }}>
-          New Tossup
+        <button onClick={loadNext} disabled={!setId || !userId || loadingQuestion} style={{ padding: "8px 12px" }}>
+          {loadingQuestion ? "Loading…" : tossup ? "New Tossup" : "Start Practice"}
         </button>
 
         <label style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
@@ -485,11 +516,12 @@ if (correct) {
         <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input
             type="checkbox"
+            disabled={loadingQuestion}
             checked={questionTimerOn}
             onChange={(e) => {
               const on = e.target.checked;
               setQuestionTimerOn(on);
-              setQSecondsLeft(on ? QUESTION_SECONDS : null);
+              setQSecondsLeft(on && tossup && !result && !buzzed && !lockedOut ? QUESTION_SECONDS : null);
             }}
           />
           Question timer ({QUESTION_SECONDS}s)
@@ -502,6 +534,7 @@ if (correct) {
         <select
           value={categoryFilter}
           onChange={(e) => {
+            resetPractice();
             setUseWeakestMode(false);
             setCategoryFilter(e.target.value);
           }}
@@ -519,6 +552,7 @@ if (correct) {
         <button
           onClick={() => {
             if (weakestButtonDisabled) return;
+            resetPractice();
             setUseWeakestMode((prev) => !prev);
             setCategoryFilter("all");
           }}
@@ -548,7 +582,13 @@ if (correct) {
       </div>
 
       {!tossup ? (
-        <p>No tossups found in this set (or none match your category filter yet).</p>
+        <div role="status" style={{ padding: 24, border: "1px solid #ddd", borderRadius: 10 }}>
+          {loadingQuestion ? <p>Loading your question…</p> : questionError ? <p>{questionError}</p> : <>
+            <h3 style={{ marginTop: 0 }}>Practice at your pace</h3>
+            <p>Choose your category and settings, then select Start Practice when you’re ready.</p>
+            <p>Press Space to buzz. After a question, press Enter for the next tossup.</p>
+          </>}
+        </div>
       ) : (
         <>
           <div style={{ position: "relative", border: "1px solid #ddd", borderRadius: 10, padding: 14, lineHeight: 1.5 }}>

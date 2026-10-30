@@ -329,6 +329,7 @@ export default function DashboardClient() {
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const [categorySearch, setCategorySearch] = useState("");
   const [sortKey, setSortKey] = useState<"category" | "best" | "last_played">("category");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
@@ -540,7 +541,7 @@ if (!cancelled) {
   }, [rows]);
 
   const sortedRows = useMemo(() => {
-    const copy = [...rows];
+    const copy = rows.filter((row) => row.category_name.toLowerCase().includes(categorySearch.trim().toLowerCase()));
 
     function cmp(a: Row, b: Row) {
       if (sortKey === "category") {
@@ -564,7 +565,7 @@ if (!cancelled) {
     });
 
     return copy;
-  }, [rows, sortKey, sortDir]);
+  }, [rows, sortKey, sortDir, categorySearch]);
 
   const weekLabel =
   weekActivity
@@ -597,6 +598,81 @@ if (!cancelled) {
   <Link href="/stats">Stats</Link>
   
 </div>
+      <section style={{ padding: 20, border: "1px solid #bfdbfe", borderRadius: 12, background: "#eff6ff", color: "#172554" }}>
+        <h1 style={{ margin: "0 0 8px", fontSize: 26 }}>Ready to practice?</h1>
+        <p style={{ margin: "0 0 16px" }}>Choose one of your assigned categories and work toward your next badge.</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center" }}>
+          <a href={assignedCategories.length ? "#assigned-categories" : "#all-categories"} style={{ background: "#2563eb", color: "white", padding: "12px 18px", borderRadius: 8, fontWeight: 700, textDecoration: "none" }}>
+            {assignedCategories.length ? "Practice My Categories" : "Choose a Category"}
+          </a>
+          <Link href="/play">Free practice</Link>
+        </div>
+      </section>
+  {/* My Assigned Categories */}
+  <section id="assigned-categories" aria-label="My assigned categories"
+    style={{
+      marginTop: 14,
+      border: "1px solid #ddd",
+      borderRadius: 12,
+      padding: 12,
+      background: "#fafafa",
+    }}
+  >
+    <div style={{ fontWeight: 800, marginBottom: 6 }}>📌 My Assigned Categories</div>
+    <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+      These are the categories you are responsible for practicing.
+    </div>
+
+    {assignedCategories.length === 0 ? (
+      <div style={{ color: "#666", fontSize: 14 }}>No assigned categories yet. Choose a category below to practice, or ask your coach for an assignment.</div>
+    ) : (
+      <div
+        style={{
+          maxHeight: 260,
+          overflowY: "auto",
+          paddingRight: 4,
+        }}
+      >
+        <div style={{ display: "grid", gap: 8 }}>
+          {assignedCategories.map((row) => (
+            <div
+              key={row.category_id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto",
+                gap: 10,
+                alignItems: "center",
+                padding: "6px 0",
+                borderBottom: "1px solid #eee",
+              }}
+            >
+              <div style={{ fontWeight: 700 }}>
+  {row.badge_emoji} {row.category_name}
+</div>
+
+              <Link
+                href={`/round?category_id=${encodeURIComponent(row.category_id)}&n=20`}
+                style={{
+                  display: "inline-block",
+                  padding: "4px 8px",
+                  borderRadius: 10,
+                  border: "1px solid #ccc",
+                  textDecoration: "none",
+                  fontWeight: 800,
+                  color: "#111",
+                  background: "white",
+                  minWidth: 42,
+                  textAlign: "center",
+                }}
+              >
+                Practice
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </section>
       {/* Top row: streak pill + warning */}
       <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
         <div
@@ -627,7 +703,7 @@ if (!cancelled) {
               color: "#856404",
             }}
           >
-            ⚠️ Complete a full round today to keep your streak alive.
+            {practiceStreak > 0 ? "Complete a full round today to keep your streak alive." : "Complete a full round today to start your streak."}
           </div>
         )}
       </div>
@@ -636,7 +712,7 @@ if (!cancelled) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "0.9fr 1.35fr",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
           gap: 14,
           alignItems: "start",
           marginTop: 14,
@@ -744,7 +820,7 @@ if (!cancelled) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
           gap: 10,
         }}
       >
@@ -796,71 +872,7 @@ if (!cancelled) {
     </div>
   </div>
 
-  {/* My Assigned Categories */}
-  <div
-    style={{
-      marginTop: 14,
-      border: "1px solid #ddd",
-      borderRadius: 12,
-      padding: 12,
-      background: "#fafafa",
-    }}
-  >
-    <div style={{ fontWeight: 800, marginBottom: 6 }}>📌 My Assigned Categories</div>
-    <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
-      These are the categories you are responsible for practicing.
-    </div>
 
-    {assignedCategories.length === 0 ? (
-      <div style={{ color: "#666", fontSize: 14 }}>No assigned categories yet.</div>
-    ) : (
-      <div
-        style={{
-          maxHeight: 260,
-          overflowY: "auto",
-          paddingRight: 4,
-        }}
-      >
-        <div style={{ display: "grid", gap: 8 }}>
-          {assignedCategories.map((row) => (
-            <div
-              key={row.category_id}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr auto",
-                gap: 10,
-                alignItems: "center",
-                padding: "6px 0",
-                borderBottom: "1px solid #eee",
-              }}
-            >
-              <div style={{ fontWeight: 700 }}>
-  {row.badge_emoji} {row.category_name}
-</div>
-
-              <Link
-                href={`/round?category_id=${encodeURIComponent(row.category_id)}&n=20`}
-                style={{
-                  display: "inline-block",
-                  padding: "4px 8px",
-                  borderRadius: 10,
-                  border: "1px solid #ccc",
-                  textDecoration: "none",
-                  fontWeight: 800,
-                  color: "#111",
-                  background: "white",
-                  minWidth: 42,
-                  textAlign: "center",
-                }}
-              >
-                Go
-              </Link>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
 </div>
 </div>
 
@@ -883,6 +895,12 @@ if (!cancelled) {
         </div>
       </div>
 
+      <section id="all-categories" style={{ marginTop: 24 }}>
+        <h2>All Categories</h2>
+        <label htmlFor="category-search">Find a category</label>
+        <input id="category-search" type="search" value={categorySearch} onChange={(event) => setCategorySearch(event.target.value)} placeholder="Search math, history, science…" style={{ display: "block", width: "100%", maxWidth: 420, padding: 12, marginTop: 8, border: "1px solid #aaa", borderRadius: 8 }} />
+        {!loading && !error && sortedRows.length === 0 && <p role="status">No categories match your search.</p>}
+      </section>
       {/* Practice weakest CTA */}
       <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
         
